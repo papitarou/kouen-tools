@@ -462,6 +462,14 @@ const PLANTS = {
     hardy:"◎ 丈夫で耐寒", heat:"○", bloom:"4〜11月と非常に長い",
     note:"白からピンクへ咲き進む小花を株一面に。こぼれ種でも増えるほど丈夫。石垣やふちどりに。乱れたら刈り込みで更新。",
     tags:["超長期開花","こぼれ種で増える"] },
+  pentas:{ name:"ペンタス", type:"非耐寒性多年草（一年草扱い）", sun:"日向",
+    hardy:"× 10℃以下で傷む", heat:"◎ 高温多湿に非常に強い", bloom:"5〜11月",
+    note:"星形の小花が密に集まって咲く夏〜秋の定番。真夏も途切れず咲き続け、蝶や昆虫を呼ぶ。肥料切れに注意。",
+    tags:["夏に強い","長期間開花","蝶を呼ぶ"] },
+  portulaca:{ name:"ポーチュラカ（花スベリヒユ）", type:"一年草", sun:"日向",
+    hardy:"× 霜で枯れる", heat:"◎ 高温乾燥に極めて強い", bloom:"6〜10月",
+    note:"多肉質の葉と茎を持つ夏花壇の定番。高温・乾燥に極めて強く、水はけさえよければほぼ放置でよく咲く。曇り・雨の日は花が閉じる。",
+    tags:["夏に強い","乾燥に強い","ローメンテナンス"] },
 
   /* ★ 仕様書の標準種（春冬花壇など） ★ */
   pansy:{ name:"パンジー・ビオラ", type:"一年草（秋植え）", sun:"日向",
@@ -508,6 +516,7 @@ const PLANTS = {
 const PLANT_ORDER = [
   "nichinichi","melampodium","zinnia","coleus","poinsettia",
   "gaura","verbena","lavender","marigold","lamium","erigeron",
+  "pentas","portulaca",
   "pansy","petunia","salvia","cosmos","habotan","tulip",
   "other_annual","other_perennial","other_bulb"
 ];
@@ -681,6 +690,36 @@ const CARE = {
       why:"全体を半分に刈り込むと乱れた株姿がリセットされ、新芽が吹いて再び密に咲く"},
     env:"日向〜半日陰、水はけのよい場所。乾燥にも強く非常に丈夫。",
     water:"根づけばほぼ雨任せでよい。" },
+  pentas:{
+    deadhead:{
+      text:"花房が咲き終わったら花茎ごと切る。こまめに摘むほど次々と花房が上がる。",
+      timing:"5〜11月の開花中（花房の花が落ち始めたら随時）",
+      why:"咲き終わった花房を残すと種がつき株の体力を消耗する。切ることで次の花芽が出やすくなる"},
+    pinch:{
+      text:"若苗の頃に先端を摘むとよく枝分かれしてこんもり咲く。間延びしたら節の上で切り戻す。",
+      timing:"定植後1〜2週間以内に1回。伸びすぎたら随時",
+      why:"節から脇芽が2本出て枝数が増え、花房の数も増える。一本立ちより枝数が多い方が見栄えがよい"},
+    prune:{
+      text:"草姿が乱れたら1/3程度切り戻す。秋に越冬させる場合は11月頃に切り戻して室内へ。",
+      timing:"草姿が乱れた時随時。越冬を試みる場合は11月頃（霜の前）",
+      why:"切り戻すと新芽が吹いて再び咲く。寒さに弱いので霜の前に室内に移すか、一年草として扱う"},
+    env:"日向・高温多湿に強い夏の花。水はけのよい土を好む。肥料切れすると花が少なくなるので月1回の追肥が効果的。",
+    water:"乾いたらたっぷり。過湿は嫌うので水はけを確保。" },
+  portulaca:{
+    deadhead:{
+      text:"基本不要（一日花で自然に落ちるセルフクリーニング型）。見た目が気になる時だけ取り除く。",
+      timing:"特に不要（一日花で翌日には自然に散る）",
+      why:"花が一日で落ちるため花がら摘みはほぼ不要。こぼれ種で自然に更新されることも多い"},
+    pinch:{
+      text:"伸びすぎた枝先を切り戻すとまとまる。",
+      timing:"伸びすぎた時随時（梅雨明け以降7〜8月が多い）",
+      why:"株が広がりすぎると中心が蒸れやすくなる。切り戻しで締まってまた密に咲く"},
+    prune:{
+      text:"真夏に全体が乱れたら株ごと1/2刈り込むと再生する。",
+      timing:"真夏（7〜8月）に乱れた時",
+      why:"高温乾燥に極めて強い植物なので思い切って刈り込んでも問題ない。新芽が吹いてすぐ回復する"},
+    env:"日向・高温・乾燥を好む。多肉質のため水はけのよい土が必須。日照が足りないと花が少なくなる。曇りや雨の日は花が閉じる。",
+    water:"非常に乾燥に強い。根づいたら基本雨任せでよい。やりすぎると根腐れするので注意。" },
 
   /* 標準種 */
   pansy:{
@@ -849,6 +888,8 @@ const PLANT_VIS = {
   marigold:{flower:"round",fcol:"#ff9a1f",fcol2:"#ffc34d",leaf:"divided",lcol:"#3f9468",form:"upright"},
   lamium:{flower:"cluster",fcol:"#e58fc0",leaf:"variegated",lcol:"#4f9e6e",form:"spreading"},
   erigeron:{flower:"daisy",fcol:"#f2b8d0",eye:"#ffd23f",petN:16,leaf:"oval",lcol:"#3f9468",form:"mound"},
+  pentas:{flower:"cluster",fcol:"#ff6b9d",eye:"#fff0f8",leaf:"oval",lcol:"#3f9468",form:"mound"},
+  portulaca:{flower:"flat5",fcol:"#ff7f50",eye:"#ffd700",leaf:"oval",lcol:"#8fbc8f",form:"spreading"},
   pansy:{flower:"flat5",fcol:"#7d5fd0",eye:"#ffd23f",leaf:"oval",lcol:"#3f9468",form:"mound"},
   petunia:{flower:"flat5",fcol:"#d066c0",eye:"#ffe6fa",leaf:"oval",lcol:"#3f9468",form:"mound"},
   salvia:{flower:"spike",fcol:"#e3402f",leaf:"oval",lcol:"#3f9468",form:"upright"},
@@ -868,7 +909,8 @@ const HABIT_OF = {
   petunia:"opposite", cosmos:"opposite", poinsettia:"opposite", other_annual:"opposite",
   coleus:"foliage", habotan:"foliage",
   gaura:"tallcut", lavender:"tallcut", verbena:"tallcut", salvia:"tallcut",
-  lamium:"mat", erigeron:"mat", pansy:"mat", other_perennial:"mat",
+  lamium:"mat", erigeron:"mat", pansy:"mat", portulaca:"mat", other_perennial:"mat",
+  pentas:"opposite",
   tulip:"bulb", other_bulb:"bulb"
 };
 const HABIT = {
