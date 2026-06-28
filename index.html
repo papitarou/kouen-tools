@@ -1,0 +1,1450 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0">
+<title>花壇管理AIアドバイザー｜公園緑地の花壇診断ツール</title>
+<style>
+  /* ===== 基本設定（全部手書きCSS・外部CDN一切なし） ===== */
+  :root{
+    --bg:#0f1f17;
+    --bg2:#16291f;
+    --panel:#1c3527;
+    --panel2:#234232;
+    --line:#2f5a42;
+    --ink:#eef7f0;
+    --ink-dim:#b9d3c3;
+    --accent:#6fe3a0;
+    --accent2:#4fb37a;
+    --green:#37c97a;
+    --green-bg:#123c28;
+    --yellow:#ffd23f;
+    --yellow-bg:#3d3410;
+    --red:#ff6b6b;
+    --red-bg:#411a1a;
+    --chat-bot:#1f3b2c;
+    --chat-user:#2c5a40;
+    --shadow:0 6px 22px rgba(0,0,0,.35);
+    --radius:16px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic UI","Meiryo",system-ui,sans-serif;
+    background:linear-gradient(160deg,var(--bg),var(--bg2));
+    color:var(--ink);
+    line-height:1.7;
+    -webkit-text-size-adjust:100%;
+    min-height:100vh;
+  }
+  header.app{
+    padding:18px 20px 14px;
+    text-align:center;
+    border-bottom:1px solid var(--line);
+    background:rgba(0,0,0,.18);
+    position:sticky;top:0;z-index:20;
+    backdrop-filter:blur(6px);
+  }
+  header.app h1{
+    margin:0;font-size:1.42rem;letter-spacing:.02em;
+    display:flex;align-items:center;justify-content:center;gap:.4em;
+  }
+  header.app .sub{margin:4px 0 0;font-size:.84rem;color:var(--ink-dim);}
+  .badge-leaf{font-size:1.3em;}
+
+  .wrap{
+    max-width:1280px;margin:0 auto;padding:18px;
+    display:grid;grid-template-columns:1fr;gap:18px;
+  }
+  @media(min-width:980px){
+    .wrap{grid-template-columns:1fr 1fr;align-items:start;}
+  }
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+  .card>.card-head{
+    padding:14px 18px;
+    font-weight:700;font-size:1.06rem;
+    background:linear-gradient(90deg,var(--panel2),transparent);
+    border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:.5em;
+  }
+  .card>.card-body{padding:16px 18px 20px;}
+
+  /* ===== フォーム ===== */
+  .field{margin-bottom:16px;}
+  .field>label.q{
+    display:block;font-weight:700;font-size:.92rem;
+    margin-bottom:8px;color:var(--ink);
+  }
+  .field>label.q .num{
+    display:inline-block;min-width:1.5em;height:1.5em;line-height:1.5em;
+    text-align:center;background:var(--accent2);color:#06150d;
+    border-radius:50%;font-size:.8rem;margin-right:.4em;font-weight:800;
+  }
+  select{
+    width:100%;padding:13px 14px;font-size:1.02rem;
+    background:var(--bg2);color:var(--ink);
+    border:1.5px solid var(--line);border-radius:12px;
+    appearance:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236fe3a0' stroke-width='3'><path d='M6 9l6 6 6-6'/></svg>");
+    background-repeat:no-repeat;background-position:right 14px center;
+    cursor:pointer;
+  }
+  select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(111,227,160,.18);}
+
+  .btnrow{display:flex;flex-wrap:wrap;gap:8px;}
+  .chip{
+    flex:1 1 auto;min-width:30%;
+    padding:12px 10px;font-size:.95rem;font-weight:700;
+    background:var(--bg2);color:var(--ink-dim);
+    border:1.5px solid var(--line);border-radius:12px;
+    cursor:pointer;transition:.12s;text-align:center;
+  }
+  .chip:hover{border-color:var(--accent2);}
+  .chip.active{
+    background:var(--accent2);color:#06150d;border-color:var(--accent);
+    box-shadow:0 0 0 3px rgba(111,227,160,.2);
+  }
+
+  /* ===== 出力エリア ===== */
+  .out-block{margin-top:6px;}
+  .cond{
+    display:flex;align-items:center;gap:14px;
+    padding:16px;border-radius:14px;margin-bottom:16px;
+    border:1.5px solid;
+  }
+  .cond .light{
+    width:46px;height:46px;border-radius:50%;flex:0 0 auto;
+    box-shadow:0 0 18px currentColor;
+  }
+  .cond .label{font-size:1.18rem;font-weight:800;}
+  .cond .desc{font-size:.84rem;opacity:.92;font-weight:500;}
+  .cond.good{background:var(--green-bg);border-color:var(--green);color:var(--green);}
+  .cond.warn{background:var(--yellow-bg);border-color:var(--yellow);color:var(--yellow);}
+  .cond.bad{background:var(--red-bg);border-color:var(--red);color:var(--red);}
+  .cond .txt{color:var(--ink);}
+  .cond .txt .label{color:inherit;}
+
+  .sec{
+    margin-bottom:14px;background:var(--bg2);
+    border:1px solid var(--line);border-radius:12px;overflow:hidden;
+  }
+  .sec h3{
+    margin:0;padding:10px 14px;font-size:.92rem;
+    background:var(--panel2);display:flex;align-items:center;gap:.45em;
+  }
+  .sec .sec-in{padding:12px 14px;font-size:.94rem;}
+  .sec .sec-in ul{margin:0;padding-left:1.25em;}
+  .sec .sec-in li{margin:6px 0;}
+  .tag{
+    display:inline-block;font-size:.74rem;font-weight:700;
+    padding:2px 9px;border-radius:999px;margin:2px 4px 2px 0;
+    background:var(--panel2);border:1px solid var(--line);color:var(--ink-dim);
+  }
+  .tag.hot{background:#3a1f10;border-color:#b5651d;color:#ffb877;}
+  .tag.cold{background:#10243a;border-color:#3d6fb5;color:#8fc0ff;}
+  .tag.life{background:#241038;border-color:#7a4bb5;color:#cba0ff;}
+  .do-item{
+    display:flex;gap:10px;align-items:flex-start;
+    padding:10px 12px;margin:8px 0;border-radius:10px;
+    background:var(--panel);border:1px solid var(--line);
+  }
+  .do-item .ic{font-size:1.25rem;flex:0 0 auto;line-height:1.4;}
+  .do-item .body b{color:var(--accent);}
+  .do-item.urgent{border-color:var(--red);background:var(--red-bg);}
+  .do-item.urgent .body b{color:#ffb0b0;}
+
+  /* お手入れ・好む環境 */
+  .sec.care h3{background:linear-gradient(90deg,#2a4d1e,#234232);}
+  .care-item{
+    display:flex;gap:11px;align-items:flex-start;
+    padding:11px 12px;margin:8px 0;border-radius:10px;
+    background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent2);
+  }
+  .care-item .care-ic{font-size:1.3rem;flex:0 0 auto;line-height:1.3;}
+  .care-item b{color:var(--accent);}
+  .sec.env h3{background:linear-gradient(90deg,#143a4d,#234232);}
+  .env-line{
+    display:flex;gap:11px;align-items:flex-start;
+    padding:9px 12px;margin:7px 0;border-radius:10px;
+    background:var(--bg);border:1px solid var(--line);
+  }
+  .env-line .env-ic{font-size:1.2rem;flex:0 0 auto;}
+  .env-line b{color:#8fc0ff;}
+
+  /* 作業イラスト（切る位置の図解） */
+  .cutguide{
+    background:linear-gradient(135deg,#143a28,#102b1d);
+    border:1px solid var(--accent2);border-radius:12px;padding:11px 14px;margin:10px 0 4px;
+  }
+  .cutguide .cg-head{font-size:.92rem;font-weight:800;color:var(--accent);display:flex;align-items:center;gap:.5em;flex-wrap:wrap;}
+  .cutguide .cg-tag{
+    font-size:.72rem;font-weight:700;color:#ffd6a0;
+    background:#2a1d0a;border:1px solid #b5651d;border-radius:999px;padding:2px 10px;
+  }
+  .cutguide .cg-rule{font-size:.86rem;color:var(--ink);margin-top:6px;line-height:1.55;}
+  .cutguide .cg-rule b{color:#ffce8a;}
+  .fig-title{
+    font-size:.82rem;font-weight:800;color:#ffd6a0;margin:12px 0 6px;
+    display:flex;align-items:center;gap:.4em;flex-wrap:wrap;
+  }
+  .fig-title .legend{
+    font-size:.7rem;font-weight:600;color:var(--ink-dim);
+    background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:1px 9px;
+  }
+  .fig-title .legend .ln{color:#ff8c8c;font-weight:800;letter-spacing:1px;}
+  .care-figs{display:grid;grid-template-columns:1fr;gap:10px;margin:2px 0 4px;}
+  @media(min-width:560px){.care-figs.two{grid-template-columns:1fr 1fr;}}
+  .care-fig{
+    background:#0d1a13;border:1px solid var(--line);border-radius:11px;padding:8px 8px 7px;
+  }
+  .care-fig svg{width:100%;height:auto;display:block;}
+  .care-fig .cap{font-size:.78rem;color:var(--ink-dim);margin-top:6px;line-height:1.5;}
+  .care-fig .cap b{color:#ffce8a;}
+
+  .plan-box{
+    background:linear-gradient(135deg,#143a28,#10301f);
+    border:1px solid var(--accent2);border-radius:12px;padding:13px 15px;
+  }
+  .plan-box .season-name{font-weight:800;color:var(--accent);font-size:1rem;}
+
+  /* ===== チャット ===== */
+  .preset-row{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
+  .preset{
+    text-align:left;padding:11px 13px;font-size:.9rem;font-weight:600;
+    background:var(--bg2);color:var(--ink);
+    border:1.5px solid var(--line);border-radius:11px;cursor:pointer;transition:.12s;
+  }
+  .preset:hover{border-color:var(--accent2);background:var(--panel2);}
+  .preset.reason{
+    border-color:var(--accent2);background:#143726;color:var(--accent);font-weight:800;
+  }
+  .preset.care{
+    border-color:#b5651d;background:#2a1d0a;color:#ffd6a0;font-weight:800;
+  }
+  .chat-log{
+    height:340px;overflow-y:auto;padding:6px 4px;margin-bottom:12px;
+    display:flex;flex-direction:column;gap:12px;
+    border:1px solid var(--line);border-radius:12px;background:var(--bg);
+    padding:14px;
+  }
+  .msg{display:flex;gap:10px;max-width:92%;}
+  .msg .av{
+    width:38px;height:38px;border-radius:50%;flex:0 0 auto;
+    display:flex;align-items:center;justify-content:center;font-size:1.3rem;
+    background:var(--panel2);border:1px solid var(--line);
+  }
+  .msg .bubble{
+    padding:11px 14px;border-radius:14px;font-size:.92rem;
+    background:var(--chat-bot);border:1px solid var(--line);
+  }
+  .msg .bubble .name{font-size:.74rem;color:var(--accent);font-weight:800;margin-bottom:3px;}
+  .msg .bubble b{color:var(--accent);}
+  .msg.user{align-self:flex-end;flex-direction:row-reverse;}
+  .msg.user .bubble{background:var(--chat-user);}
+  .msg.user .av{background:#2c5a40;}
+  .chat-input-row{display:flex;gap:8px;}
+  .chat-input-row input{
+    flex:1;padding:13px 14px;font-size:1rem;border-radius:12px;
+    background:var(--bg2);color:var(--ink);border:1.5px solid var(--line);
+  }
+  .chat-input-row input:focus{outline:none;border-color:var(--accent);}
+  .chat-input-row button{
+    padding:0 20px;font-size:1rem;font-weight:800;border:none;border-radius:12px;
+    background:var(--accent);color:#06150d;cursor:pointer;
+  }
+  .chat-input-row button:active{transform:scale(.97);}
+
+  .note{
+    max-width:1280px;margin:4px auto 30px;padding:14px 20px;
+    font-size:.82rem;color:var(--ink-dim);text-align:center;line-height:1.6;
+  }
+  .note .warn-box{
+    display:inline-block;background:#2a1d0a;border:1px solid #b5651d;color:#ffd6a0;
+    padding:8px 14px;border-radius:10px;margin-bottom:8px;
+  }
+  .addinfo{
+    background:#10301f;border:1px dashed var(--accent2);border-radius:12px;
+    padding:12px 15px;margin:10px 0 0;font-size:.86rem;color:var(--ink-dim);
+  }
+  .addinfo b{color:var(--accent);}
+  ::-webkit-scrollbar{width:9px;height:9px;}
+  ::-webkit-scrollbar-thumb{background:var(--line);border-radius:9px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+
+  /* ===== 合言葉ロック ===== */
+  #lockOverlay{
+    position:fixed;inset:0;z-index:9999;
+    background:linear-gradient(160deg,#0a1510,#0d1e16);
+    display:flex;align-items:center;justify-content:center;
+  }
+  #lockBox{
+    background:var(--panel);
+    border:1px solid var(--line);border-radius:20px;
+    padding:36px 32px;max-width:380px;width:90%;
+    text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.5);
+  }
+  #lockBox .lock-icon{font-size:3rem;margin-bottom:10px;}
+  #lockBox h2{margin:0 0 6px;font-size:1.28rem;color:var(--accent);}
+  #lockBox .lock-sub{font-size:.88rem;color:var(--ink-dim);margin:0 0 22px;line-height:1.6;}
+  #lockPass{
+    width:100%;padding:14px 16px;font-size:1.08rem;
+    background:var(--bg2);color:var(--ink);
+    border:1.5px solid var(--line);border-radius:12px;
+    margin-bottom:10px;text-align:center;letter-spacing:.18em;
+  }
+  #lockPass:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(111,227,160,.18);}
+  #lockBtn{
+    width:100%;padding:14px;font-size:1.05rem;font-weight:700;
+    background:var(--accent2);color:#06150d;
+    border:none;border-radius:12px;cursor:pointer;transition:.12s;
+  }
+  #lockBtn:hover{background:var(--accent);}
+  #lockErr{color:var(--red);font-size:.88rem;margin-top:8px;min-height:1.3em;}
+</style>
+</head>
+<body>
+
+<div id="lockOverlay">
+  <div id="lockBox">
+    <div class="lock-icon">🌷</div>
+    <h2>花壇管理AIアドバイザー</h2>
+    <p class="lock-sub">公園職員専用ツールです。<br>合言葉を入力してください。</p>
+    <input id="lockPass" type="password" placeholder="合言葉を入力" autocomplete="off" autocorrect="off" autocapitalize="none">
+    <button id="lockBtn">入る →</button>
+    <p id="lockErr"></p>
+  </div>
+</div>
+
+<header class="app">
+  <h1><span class="badge-leaf">🌷</span>花壇管理AIアドバイザー</h1>
+  <p class="sub">公園緑地の花壇を、その場で診断・処方。── 現場のガーデナーのための一画面ツール</p>
+</header>
+
+<div class="wrap">
+
+  <!-- ============ A. 状態診断シミュレーター ============ -->
+  <section class="card" id="simCard">
+    <div class="card-head">🩺 花壇 状態診断シミュレーター</div>
+    <div class="card-body">
+
+      <div class="field">
+        <label class="q"><span class="num">1</span>植物の種類</label>
+        <select id="selPlant"></select>
+      </div>
+
+      <div class="field">
+        <label class="q"><span class="num">2</span>現在の季節</label>
+        <div class="btnrow" id="seasonRow"></div>
+      </div>
+
+      <div class="field">
+        <label class="q"><span class="num">3</span>日照条件</label>
+        <div class="btnrow" id="sunRow"></div>
+      </div>
+
+      <div class="field">
+        <label class="q"><span class="num">4</span>いまの花壇の状態・症状</label>
+        <select id="selSymptom"></select>
+      </div>
+
+      <!-- 出力 -->
+      <div class="out-block" id="output"></div>
+
+    </div>
+  </section>
+
+  <!-- ============ B. 園芸プロAIチャット ============ -->
+  <section class="card">
+    <div class="card-head">🧑‍🌾 園芸プロ相談窓口 ── ベテラン園芸家「みどり親方」</div>
+    <div class="card-body">
+
+      <div class="preset-row" id="presetRow">
+        <button class="preset reason" data-act="reason">💡 いまの診断結果の理由を教えて</button>
+        <button class="preset care" data-act="care">✂ この花のお手入れ（花がら摘み・剪定・高さ・環境）を教えて</button>
+        <button class="preset" data-q="pansy-summer">なぜパンジー・ビオラは夏に枯れるの？</button>
+        <button class="preset" data-q="deadhead">花がら摘みはなぜ必要なの？</button>
+        <button class="preset" data-q="marigold">マリーゴールドを混ぜると虫が減るって本当？</button>
+        <button class="preset" data-q="rainy">梅雨に花が傷む・腐るのを防ぐには？</button>
+      </div>
+
+      <div class="chat-log" id="chatLog"></div>
+
+      <div class="chat-input-row">
+        <input id="chatInput" type="text" placeholder="質問を入力（例：徒長とは？／追肥のタイミング）" autocomplete="off">
+        <button id="chatSend">送信</button>
+      </div>
+
+      <div class="addinfo">
+        🌱 <b>この公園で実際に植えている花の種類を教えてくれれば、専用の品種として追加できます。</b>
+        本アプリは後から品種を増やせる設計です（プログラム冒頭の <code>PLANTS</code> に1件足すだけ）。
+      </div>
+
+    </div>
+  </section>
+
+</div>
+
+<div class="note">
+  <div class="warn-box">⚠ 本ツールは現場判断の支援用です。農薬の使用は公園のルール・ラベルの指示に必ず従ってください。</div>
+  <div>診断は気象・土壌・品種で変わります。最終判断は現場の状態をよく観察したうえで行ってください。</div>
+</div>
+
+<script>
+/* ===================================================================
+   花壇管理AIアドバイザー  ── 完全オフライン・キーワード辞書AI
+   外部CDN不使用 / 素のJS + 手書きCSSのみ
+   品種追加：PLANTS 配列に1件足すだけ
+=================================================================== */
+
+/* ---------- 2.1 代表植物データ（現場の花苗＋仕様の標準種） ---------- */
+/* type: 一年草 / 宿根草 / 球根   sun: 日向/半日陰/日陰 のおすすめ */
+const PLANTS = {
+  /* ★ この公園で実際に植えている花苗 ★ */
+  nichinichi:{ name:"ニチニチソウ（日々草）", type:"一年草", sun:"日向",
+    hardy:"× 寒さに弱い", heat:"◎ 高温乾燥に非常に強い", bloom:"6〜10月",
+    note:"夏花壇の定番。過湿を最も嫌うので水のやり過ぎ厳禁。雨が続くと立枯病が出やすい。花がら摘みで姿よく長く咲く。",
+    tags:["夏に強い","過湿に弱い"] },
+  melampodium:{ name:"メランポジウム", type:"一年草", sun:"日向",
+    hardy:"× 寒さに弱い", heat:"◎ 真夏の暑さに極めて強い", bloom:"6〜10月",
+    note:"こんもり茂り黄花が途切れず咲く優秀な夏花壇素材。基本は花がら摘み不要で手間いらず。痩せ地でも育つ。",
+    tags:["夏に強い","手間が少ない"] },
+  zinnia:{ name:"ジニア（百日草）", type:"一年草", sun:"日向",
+    hardy:"× 寒さに弱い", heat:"◎ 暑さに強い", bloom:"6〜10月",
+    note:"その名の通り花期が長い。花がら摘み・切り戻しでよく分枝。多湿でうどんこ病が出やすいので風通しを確保。",
+    tags:["夏に強い","花期が長い"] },
+  coleus:{ name:"コリウス", type:"一年草（観葉）", sun:"半日陰",
+    hardy:"× 寒さに弱い", heat:"○ 暑さに強い", bloom:"葉を観賞（夏〜秋）",
+    note:"カラフルな葉を楽しむリーフプランツ。花穂は出たら摘むと葉色が長持ち。強い直射より明るい半日陰で葉が美しい。乾燥に注意。",
+    tags:["葉を観賞","半日陰向き"] },
+  poinsettia:{ name:"ポインセチア", type:"一年草扱い（非耐寒低木）", sun:"日向〜明るい室内",
+    hardy:"×× 5℃以下で傷む", heat:"○", bloom:"苞が色づくのは11〜1月",
+    note:"クリスマスの定番。短日処理で苞が赤く色づく。寒さに非常に弱く、屋外花壇では冬に枯れるので冬期は鉢で軒下・室内管理が基本。",
+    tags:["冬の寒さに弱い","短日で色づく"] },
+  gaura:{ name:"ガウラ（白蝶草）", type:"宿根草", sun:"日向",
+    hardy:"◎ 耐寒性あり", heat:"◎ 暑さ・乾燥に強い", bloom:"5〜10月と長い",
+    note:"蝶が舞うような花が初夏から秋まで。丈夫で植えっぱなしOK。伸びて乱れたら切り戻すと再び咲く。数年で株分け。",
+    tags:["植えっぱなしOK","花期が長い"] },
+  verbena:{ name:"宿根バーベナ", type:"宿根草", sun:"日向",
+    hardy:"○ 種類により耐寒", heat:"◎ 暑さに強い", bloom:"5〜10月",
+    note:"横へ広がりグラウンドカバーにも。花後に切り戻すと繰り返し開花。過湿と蒸れに注意し風通しよく。",
+    tags:["広がる","切り戻しで再開花"] },
+  lavender:{ name:"ラベンダー", type:"宿根草（低木）", sun:"日向",
+    hardy:"○〜◎ 系統による", heat:"△ 高温多湿が苦手", bloom:"5〜7月",
+    note:"乾燥と風通しを好む。日本の夏の蒸れに弱いので、花後に株を1/2ほど切り戻して風を通すのが夏越しのコツ。水はけ重視。",
+    tags:["乾燥を好む","蒸れに弱い"] },
+  marigold:{ name:"マリーゴールド", type:"一年草", sun:"日向",
+    hardy:"× 寒さに弱い", heat:"◎ 暑さに強い", bloom:"5〜11月",
+    note:"根の分泌物でセンチュウを抑えるコンパニオンプランツ。乾燥に強い。花がら摘みで初夏から晩秋まで長く咲く。",
+    tags:["コンパニオンプランツ","花期が長い"] },
+  lamium:{ name:"ラミウム", type:"宿根草", sun:"半日陰〜日陰",
+    hardy:"◎ 耐寒性あり", heat:"△ 真夏の直射は苦手", bloom:"4〜6月",
+    note:"斑入りの葉が美しいカラーリーフ・グラウンドカバー。日陰の花壇のすき間埋めに最適。蒸れたら刈り込んで更新。",
+    tags:["日陰OK","グラウンドカバー"] },
+  erigeron:{ name:"エリゲロン（源平小菊）", type:"宿根草", sun:"日向〜半日陰",
+    hardy:"◎ 丈夫で耐寒", heat:"○", bloom:"4〜11月と非常に長い",
+    note:"白からピンクへ咲き進む小花を株一面に。こぼれ種でも増えるほど丈夫。石垣やふちどりに。乱れたら刈り込みで更新。",
+    tags:["超長期開花","こぼれ種で増える"] },
+
+  /* ★ 仕様書の標準種（春冬花壇など） ★ */
+  pansy:{ name:"パンジー・ビオラ", type:"一年草（秋植え）", sun:"日向",
+    hardy:"◎ 寒さに非常に強い", heat:"×× 暑さに弱く夏に枯れる", bloom:"11〜翌5月",
+    note:"冬〜春花壇の主役。花がらをこまめに摘むと春まで途切れず咲く。気温が上がる初夏で寿命を終える秋植え一年草。",
+    tags:["冬春の主役","夏に終わる"] },
+  petunia:{ name:"ペチュニア・サフィニア", type:"一年草", sun:"日向",
+    hardy:"× 非耐寒", heat:"○ 暑さは平気だが過湿に弱い", bloom:"4〜10月",
+    note:"梅雨の過湿と灰色かび病に注意。伸びて間延びしたら思い切って切り戻すとこんもり再生する。",
+    tags:["切り戻しで再生","梅雨に注意"] },
+  salvia:{ name:"サルビア（赤）", type:"一年草", sun:"日向",
+    hardy:"× 非耐寒", heat:"◎ 暑さに強い", bloom:"6〜10月",
+    note:"真っ赤な穂が夏花壇を彩る定番。花穂が終わったら切り戻すと再び立ち上がる。",
+    tags:["夏に強い"] },
+  cosmos:{ name:"コスモス", type:"一年草（秋咲き）", sun:"日向",
+    hardy:"× 非耐寒", heat:"○", bloom:"9〜11月",
+    note:"痩せ地でよく育つ。肥沃すぎ・窒素過多だと茎ばかり伸びて倒れる（追肥はほぼ不要）。",
+    tags:["秋花壇","肥料は控えめ"] },
+  habotan:{ name:"葉ボタン", type:"一年草（冬花壇）", sun:"日向",
+    hardy:"◎ 耐寒性に優れる", heat:"× 夏は不向き", bloom:"葉を観賞（11〜3月）",
+    note:"秋に植え冬に観賞する冬花壇の主役。霜に当たるほど葉色が冴える。",
+    tags:["冬花壇","耐寒"] },
+  tulip:{ name:"チューリップ（球根）", type:"球根", sun:"日向",
+    hardy:"◎", heat:"休眠", bloom:"3〜5月",
+    note:"秋植え春咲き。花後は葉が枯れるまで残して球根を太らせ、基本は掘り上げて夏は冷暗所で保管。",
+    tags:["秋植え春咲き","掘り上げ推奨"] },
+
+  /* 汎用（不明な植物用） */
+  other_annual:{ name:"その他の一年草", type:"一年草", sun:"日向",
+    hardy:"種類による", heat:"種類による", bloom:"品種により異なる",
+    note:"一年草は一季かぎりで植え替える前提。花がら摘みと追肥で開花期間を最大化し、終期には次の季節の花へ更新する。",
+    tags:["一年草の汎用アドバイス"] },
+  other_perennial:{ name:"その他の宿根草（多年草）", type:"宿根草", sun:"日向〜半日陰",
+    hardy:"種類による", heat:"種類による", bloom:"品種により異なる",
+    note:"宿根草は植えっぱなしで数年楽しめる。花後の切り戻しで姿を整え、数年に一度の株分けで若返らせる。",
+    tags:["宿根草の汎用アドバイス"] },
+  other_bulb:{ name:"その他の球根", type:"球根", sun:"日向",
+    hardy:"種類による", heat:"休眠", bloom:"品種により異なる",
+    note:"球根は花後の葉を残して球根を充実させるのが基本。チューリップは掘り上げ、スイセンは植えっぱなし可など種で異なる。",
+    tags:["球根の汎用アドバイス"] }
+};
+
+/* 表示順 */
+const PLANT_ORDER = [
+  "nichinichi","melampodium","zinnia","coleus","poinsettia",
+  "gaura","verbena","lavender","marigold","lamium","erigeron",
+  "pansy","petunia","salvia","cosmos","habotan","tulip",
+  "other_annual","other_perennial","other_bulb"
+];
+
+/* ---------- 植えたあとの手入れ＆好む環境（花の種類ごと） ----------
+   deadhead=花がら摘み / pinch=切り戻し・ピンチ（高さ・株姿） /
+   prune=剪定・刈り込み・更新 / env=好む環境 / water=水やりのコツ      */
+const CARE = {
+  nichinichi:{
+    deadhead:"咲き終わった花は早めに摘む。花がらを残すと立枯病の温床になりやすい。指でつまんで取れる。",
+    pinch:"植えてすぐ、本葉が5〜6枚のときに先端を摘む『ピンチ（摘心）』をすると枝数が増えてこんもり。間延びしたら株全体を1/3切り戻す。",
+    prune:"夏に乱れたら切り戻して再生。大きく茂りすぎる前に整える。",
+    env:"日向・高温・乾き気味を好む夏の花。水はけのよい土が絶対条件で、ジメジメが大の苦手。",
+    water:"土の表面が乾いてからたっぷり。梅雨は雨を避け、水は控えめに。" },
+  melampodium:{
+    deadhead:"基本は不要（自然に花が落ちるセルフクリーニング型）。見栄えで気になる枯れ花だけ摘めば十分。",
+    pinch:"若いうちに一度摘心するとさらにこんもり。茂りすぎたら1/3刈り込めば風が通り再生する。",
+    prune:"真夏に大きくなりすぎたら丸く刈り込んで仕立て直す。",
+    env:"日向・高温多湿に非常に強い。やせ地でもよく育つので肥料は控えめでよい。",
+    water:"乾いたらたっぷり。過湿は避ける。" },
+  zinnia:{
+    deadhead:"こまめに。咲き終わりの花は、その下の脇芽（わき芽）の少し上で茎ごと切ると、そこから分枝して次々咲く。",
+    pinch:"若苗のうちに摘心して枝数を増やす。高性種は伸びたら切り戻して草姿を整え、必要なら支柱を。",
+    prune:"梅雨〜夏は込み合った葉を整理して風を通す（うどんこ病予防）。",
+    env:"日向・高温・乾き気味。風通しが命。",
+    water:"株元へそっと。葉や花に水をかけ続けるとうどんこ病・灰色かび病が出やすい。" },
+  coleus:{
+    deadhead:"花ではなく葉を観賞する花。花穂が伸びてきたら早めに摘み取ると、株が疲れず葉色が長持ちする。",
+    pinch:"摘心がいちばん大事。先端をこまめに摘むほど枝分かれしてこんもり茂り、葉色も鮮やかに。高さもこれで調整。",
+    prune:"伸びすぎたら好きな位置で切り戻してOK。すぐ脇芽が吹く。",
+    env:"明るい半日陰がベスト。真夏の強い直射では葉が焼ける。乾燥に弱い。",
+    water:"水を好む。乾かしすぎない（しおれやすい）。" },
+  poinsettia:{
+    deadhead:"赤い部分は『苞（ほう）』で葉の変化。中心の本当の花が終わったら切る。",
+    pinch:"5月頃に各枝を半分ほど切り戻し、伸びた新芽を夏に1〜2回摘心すると、こんもりした株姿になる。",
+    prune:"色づかせるには秋（9〜10月）から『短日処理』──夕方5時〜朝8時を毎日ダンボール等で覆って真っ暗にすると苞が赤くなる。",
+    env:"日向〜明るい室内。寒さに非常に弱く、10℃を下回ると傷む。冬の屋外花壇では枯れるので鉢で軒下・室内へ。",
+    water:"乾かし気味に。やり過ぎは根を傷める。" },
+  gaura:{
+    deadhead:"咲き終わった花茎を切る。こぼれ種で増えすぎる前に。",
+    pinch:"放っておくと高く伸びて倒れやすい。初夏に一度ピンチ／切り戻して草丈を抑えると姿よく咲く。",
+    prune:"開花が一段落して乱れたら、株元の近く（地際から15〜20cm）まで思い切って切り戻すと、再び枝を伸ばして年に2〜3回咲く。数年に一度は株分けで若返り。",
+    env:"日向・水はけのよい乾いた土を好む。丈夫で植えっぱなしOK。過湿は苦手。",
+    water:"根づけば雨任せでよいほど乾燥に強い。" },
+  verbena:{
+    deadhead:"花の房が終わったら摘み取る。",
+    pinch:"横へ這うように広がる。間延びしたら切り戻すとまた密になる。",
+    prune:"花が一巡したら全体を1/3ほど切り戻すと、繰り返しよく咲く。蒸れたら刈り込んで風を通す。",
+    env:"日向・水はけ・風通しを好む。過湿と夏の蒸れに注意。",
+    water:"乾いたら与える。多湿にしない。" },
+  lavender:{
+    deadhead:"花が咲いたら花穂を早めに切る（収穫を兼ねる）。咲かせ続けると株が疲れる。",
+    pinch:"若い枝先を摘むと枝数が増える。",
+    prune:"★この花は剪定が最重要★ 花が終わったらすぐ、株全体を1/3〜1/2刈り込んで風を通す（日本の梅雨の蒸れ対策）。ただし葉のない茶色い古枝まで切り込むと枯れるので、緑の葉を必ず残す位置で。",
+    env:"日向・乾燥・風通しを好み、水はけのよいやや乾いた土が必須。高温多湿の蒸れが最大の敵。",
+    water:"乾かし気味。じめじめさせない。" },
+  marigold:{
+    deadhead:"こまめに。種をつけさせないよう、咲き終わりの花を節の上で茎ごと切ると長く咲く。",
+    pinch:"若苗で摘心して枝数を増やす。夏に疲れて間延びしたら株を半分に切り戻すと、秋にまた一斉に咲く。",
+    prune:"夏越しの切り戻しが効く。",
+    env:"日向・乾燥に強い。水はけのよい土。同じ場所の連作は避ける。",
+    water:"乾いたらたっぷり。過湿に注意。" },
+  lamium:{
+    deadhead:"花が終わったら花茎を刈る。",
+    pinch:"地面を覆うように広がる。広がりすぎたら刈り込んで抑える。",
+    prune:"蒸れたり間延びしたら株ごと刈り込むと、新しい葉を吹き直してきれいに更新できる。",
+    env:"半日陰〜日陰でいきいきする数少ない花。やや湿り気のある土を好む。真夏の直射と過湿の蒸れは苦手。",
+    water:"乾かしすぎない。" },
+  erigeron:{
+    deadhead:"こぼれ種でよく増えるので、増やしたくない場所は花後に刈る。",
+    pinch:"自然にこんもりまとまる。",
+    prune:"花が一巡して乱れたら、株ごと1/2に刈り込むと再び咲き、株姿も締まる。石垣やふちどりに最適。",
+    env:"日向〜半日陰、水はけのよい場所。乾燥にも強く非常に丈夫。",
+    water:"根づけばほぼ雨任せでよい。" },
+
+  /* 標準種 */
+  pansy:{
+    deadhead:"★花がら摘みが命★ 咲き終わりをこまめに摘むほど、次々につぼみが上がって春まで途切れず咲く。",
+    pinch:"間延びしたら1/3ほど切り戻すと再びこんもり。",
+    prune:"特に不要（一年で植え替え）。",
+    env:"日向・寒さに非常に強い。水はけのよい土。気温が上がる初夏で寿命。",
+    water:"乾いたら午前中にたっぷり。" },
+  petunia:{
+    deadhead:"こまめに。雨で傷んだ花も早めに取る（灰色かび病予防）。",
+    pinch:"伸びて間延びしたら思い切って半分に切り戻すと、脇芽が吹いてこんもり再生する。梅雨前と真夏に1回ずつが目安。",
+    prune:"切り戻しで姿を保つ。",
+    env:"日向を好むが、梅雨の長雨・過湿に弱い。雨の当たりにくい場所が安心。",
+    water:"乾いたら株元へ。葉や花を濡らしすぎない。" },
+  salvia:{
+    deadhead:"咲き終わった花穂を摘む。",
+    pinch:"花穂が一段落したら切り戻すと再び立ち上がって咲く。",
+    prune:"切り戻しで繰り返し開花。",
+    env:"日向・高温に強い。水はけのよい土。",
+    water:"乾いたらたっぷり。" },
+  cosmos:{
+    deadhead:"咲き終わりを摘むと長く咲く。",
+    pinch:"本葉が数枚のうちに摘心すると枝数が増え花数が増える。高性種は支柱で倒伏防止。",
+    prune:"伸びすぎたら切り戻し。",
+    env:"日向・やせ地でよく育つ。肥料（特に窒素）が多いと茎ばかり伸びて倒れるので追肥はほぼ不要。",
+    water:"乾燥に強い。やり過ぎない。" },
+  habotan:{
+    deadhead:"葉を観賞する花。春にとう立ち（花茎）が伸びてきたら、観賞を続けたいうちは切る。",
+    pinch:"不要。",
+    prune:"特になし。",
+    env:"日向・耐寒性に優れる冬花壇の主役。霜に当たるほど葉色が冴える。",
+    water:"乾いたら与える。冬は控えめ。" },
+  tulip:{
+    deadhead:"花が終わったら花首だけ摘み、葉は黄ばんで枯れるまで残して球根を太らせる。",
+    pinch:"不要。",
+    prune:"葉が完全に枯れたら掘り上げ、風通しのよい冷暗所で夏を越させる。",
+    env:"日向。秋に植えて春に咲く球根。水はけのよい土。",
+    water:"植え付け後と乾燥時に。休眠期は乾かす。" },
+
+  /* 汎用 */
+  other_annual:{
+    deadhead:"咲き終わりをこまめに摘むのが基本。種をつけさせないほど長く咲く。",
+    pinch:"若苗の摘心で枝数を増やし、間延びしたら切り戻して整える。",
+    prune:"一季かぎりなので、終期には次の季節の花へ植え替える。",
+    env:"品種により異なる。日照と水はけをまず確認。",
+    water:"乾いたらたっぷりのメリハリ。" },
+  other_perennial:{
+    deadhead:"咲き終わった花茎を切る。",
+    pinch:"伸びすぎ・倒れやすい種は初夏にピンチで草丈を抑える。",
+    prune:"花後の切り戻しで姿を整え、数年に一度の株分けで若返らせる。",
+    env:"品種により異なる。多くは日向〜半日陰・水はけのよい土。",
+    water:"根づけば乾燥に強い種が多い。" },
+  other_bulb:{
+    deadhead:"花後は花首を摘み、葉は残して球根を太らせる。",
+    pinch:"不要。",
+    prune:"葉が枯れたら、掘り上げる種（チューリップ等）と植えっぱなし可の種（スイセン等）を見極める。",
+    env:"多くは日向・水はけのよい土。植え付け適期を守る。",
+    water:"生育期はふつうに、休眠期は乾かす。" }
+};
+
+/* ---------- 作業イラスト（SVG）：花の種類ごとに描き分け ----------
+   赤い点線＝切るライン。すべてHTML内SVGで生成（外部画像なし・オフラインOK）
+   PLANT_VIS = 花ごとの見た目。flower=花型 / fcol=花色 / leaf=葉型 / form=草姿  */
+const PLANT_VIS = {
+  nichinichi:{flower:"flat5",fcol:"#ef88c0",eye:"#fff3fb",leaf:"oval",lcol:"#2f8f5e",form:"mound"},
+  melampodium:{flower:"daisy",fcol:"#ffcf33",eye:"#c79a18",petN:11,leaf:"oval",lcol:"#3f9468",form:"mound"},
+  zinnia:{flower:"round",fcol:"#ff6b6b",fcol2:"#ffa6a6",leaf:"oval",lcol:"#3f9468",form:"upright"},
+  coleus:{flower:"none",leaf:"pointed",lcol:"#b5462f",ledge:"#5fae5f",form:"foliage"},
+  poinsettia:{flower:"bract",fcol:"#e3402f",leaf:"pointed",lcol:"#2f7d4f",form:"upright"},
+  gaura:{flower:"wand",fcol:"#f0bcd6",leaf:"narrow",lcol:"#6f9a7a",form:"wand"},
+  verbena:{flower:"cluster",fcol:"#b56fd0",leaf:"oval",lcol:"#3f9468",form:"spreading"},
+  lavender:{flower:"spike",fcol:"#9b6fd8",leaf:"narrow",lcol:"#809c86",form:"shrub",woody:true},
+  marigold:{flower:"round",fcol:"#ff9a1f",fcol2:"#ffc34d",leaf:"divided",lcol:"#3f9468",form:"upright"},
+  lamium:{flower:"cluster",fcol:"#e58fc0",leaf:"variegated",lcol:"#4f9e6e",form:"spreading"},
+  erigeron:{flower:"daisy",fcol:"#f2b8d0",eye:"#ffd23f",petN:16,leaf:"oval",lcol:"#3f9468",form:"mound"},
+  pansy:{flower:"flat5",fcol:"#7d5fd0",eye:"#ffd23f",leaf:"oval",lcol:"#3f9468",form:"mound"},
+  petunia:{flower:"flat5",fcol:"#d066c0",eye:"#ffe6fa",leaf:"oval",lcol:"#3f9468",form:"mound"},
+  salvia:{flower:"spike",fcol:"#e3402f",leaf:"oval",lcol:"#3f9468",form:"upright"},
+  cosmos:{flower:"daisy",fcol:"#f08fb5",eye:"#ffd23f",petN:8,leaf:"divided",lcol:"#3f9468",form:"upright"},
+  habotan:{flower:"rosette",leaf:"rosette",lcol:"#8f6fd0",form:"rosette"},
+  tulip:{flower:"tulip",fcol:"#e35a6b",leaf:"narrow",lcol:"#3f9468",form:"bulb"},
+  other_annual:{flower:"flat5",fcol:"#ef88c0",eye:"#fff3fb",leaf:"oval",lcol:"#3f9468",form:"mound"},
+  other_perennial:{flower:"daisy",fcol:"#f2b8d0",eye:"#ffd23f",petN:12,leaf:"oval",lcol:"#3f9468",form:"mound"},
+  other_bulb:{flower:"tulip",fcol:"#e35a6b",leaf:"narrow",lcol:"#3f9468",form:"bulb"}
+};
+
+/* ★ 切り方は「葉のつき方・花のつき方」で変わる。花ごとに型(habit)を割り当て ★
+   opposite=対生で枝咲き / tallcut=花穂・花茎が立つ / mat=株元で広がる
+   bulb=球根(葉を残す) / foliage=葉を観賞(花穂は摘む)                       */
+const HABIT_OF = {
+  nichinichi:"opposite", melampodium:"opposite", zinnia:"opposite", marigold:"opposite",
+  petunia:"opposite", cosmos:"opposite", poinsettia:"opposite", other_annual:"opposite",
+  coleus:"foliage", habotan:"foliage",
+  gaura:"tallcut", lavender:"tallcut", verbena:"tallcut", salvia:"tallcut",
+  lamium:"mat", erigeron:"mat", pansy:"mat", other_perennial:"mat",
+  tulip:"bulb", other_bulb:"bulb"
+};
+const HABIT = {
+  opposite:{leaf:"対生・節ごとに枝咲き",
+    rule:"咲き終わった花のすぐ下、<b>葉の付け根（節）の少し上</b>で切る。その節の左右から脇芽が伸びて枝数が増える。"},
+  tallcut:{leaf:"花穂・花茎が立ち上がる",
+    rule:"咲き終わった<b>花穂（花茎）ごと、株元の葉のすぐ上まで</b>思い切って切り下げる。下の葉を残せばまた立ち上がる。"},
+  mat:{leaf:"株元から広がる（グラウンドカバー）",
+    rule:"花茎を<b>株元（葉の上）で</b>切る。全体が乱れたら<b>株ごと1/3〜1/2刈り込んで</b>更新すると、新しい葉と花を吹き直す。"},
+  bulb:{leaf:"球根（葉が球根を太らせる）",
+    rule:"咲き終わった<b>花だけを摘み取り、葉は黄ばむまで必ず残す</b>。葉を切ると来年の球根が育たない。"},
+  foliage:{leaf:"葉を観賞（花は咲かせない）",
+    rule:"伸びてきた<b>花穂は元から摘み</b>、先端を摘む（ピンチ）と枝分かれして葉が密に茂り、葉色も冴える。"}
+};
+Object.keys(HABIT_OF).forEach(k=>{ if(PLANT_VIS[k]) PLANT_VIS[k].habit=HABIT_OF[k]; });
+const F=n=>(+n).toFixed(1);
+
+/* 花を描く（cx,cy=中心 / r=大きさ） */
+function dFlower(cx,cy,r,v){
+  const c=v.fcol||"#ef88c0";
+  switch(v.flower){
+    case "flat5":{ let s="";
+      for(let i=0;i<5;i++){const a=i/5*6.283-1.571,x=cx+Math.cos(a)*r*0.62,y=cy+Math.sin(a)*r*0.62;
+        s+=`<circle cx="${F(x)}" cy="${F(y)}" r="${F(r*0.5)}" fill="${c}"/>`;}
+      return s+`<circle cx="${F(cx)}" cy="${F(cy)}" r="${F(r*0.32)}" fill="${v.eye||"#ffe08a"}"/>`; }
+    case "daisy":{ let s="";const n=v.petN||12;
+      for(let i=0;i<n;i++){const a=i/n*6.283,x=cx+Math.cos(a)*r*0.66,y=cy+Math.sin(a)*r*0.66;
+        s+=`<ellipse cx="${F(x)}" cy="${F(y)}" rx="${F(r*0.5)}" ry="${F(r*0.17)}" fill="${c}" transform="rotate(${(a*57.3).toFixed(0)} ${F(x)} ${F(y)})"/>`;}
+      return s+`<circle cx="${F(cx)}" cy="${F(cy)}" r="${F(r*0.34)}" fill="${v.eye||"#8a5a1a"}"/>`; }
+    case "round":{ const c2=v.fcol2||"#ffc34d";let s=`<circle cx="${F(cx)}" cy="${F(cy)}" r="${F(r)}" fill="${c}"/>`;
+      for(let i=0;i<11;i++){const a=i/11*6.283,x=cx+Math.cos(a)*r*0.62,y=cy+Math.sin(a)*r*0.62;
+        s+=`<circle cx="${F(x)}" cy="${F(y)}" r="${F(r*0.3)}" fill="${c2}"/>`;}
+      return s+`<circle cx="${F(cx)}" cy="${F(cy)}" r="${F(r*0.42)}" fill="${c}"/>`; }
+    case "bract":{ let s="";
+      for(let i=0;i<8;i++){const a=i/8*6.283-1.571,x1=cx+Math.cos(a)*r,y1=cy+Math.sin(a)*r,
+        xa=cx+Math.cos(a+0.3)*r*0.34,ya=cy+Math.sin(a+0.3)*r*0.34,xb=cx+Math.cos(a-0.3)*r*0.34,yb=cy+Math.sin(a-0.3)*r*0.34;
+        s+=`<path d="M${F(cx)} ${F(cy)} L${F(xa)} ${F(ya)} L${F(x1)} ${F(y1)} L${F(xb)} ${F(yb)} Z" fill="${c}"/>`;}
+      return s+`<circle cx="${F(cx)}" cy="${F(cy)}" r="${F(r*0.2)}" fill="#ffd23f"/>`; }
+    case "cluster":{ let s="";
+      [[0,2],[-r*0.5,0],[r*0.5,0],[-r*0.3,-r*0.38],[r*0.3,-r*0.38],[0,-r*0.5],[-r*0.6,-r*0.12],[r*0.6,-r*0.12]]
+        .forEach(p=>s+=`<circle cx="${F(cx+p[0])}" cy="${F(cy+p[1])}" r="${F(r*0.27)}" fill="${c}"/>`);
+      return s; }
+    case "spike":{ let s="";
+      for(let i=0;i<6;i++){const y=cy+r*0.7-i*r*0.5,w=Math.max(2.2,r*(0.5-i*0.055));
+        s+=`<ellipse cx="${F(cx)}" cy="${F(y)}" rx="${F(w)}" ry="${F(r*0.33)}" fill="${c}"/>`;}
+      return s; }
+    case "wand":{ let s="";
+      [[0,0],[-r*0.7,-r*0.35],[r*0.7,-r*0.35]].forEach(p=>{const x=cx+p[0],y=cy+p[1];
+        for(let i=0;i<4;i++){const a=i/4*6.283;s+=`<circle cx="${F(x+Math.cos(a)*r*0.32)}" cy="${F(y+Math.sin(a)*r*0.32)}" r="${F(r*0.2)}" fill="${c}"/>`;}});
+      return s; }
+    case "tulip":
+      return `<path d="M${F(cx-r*0.7)} ${F(cy)} Q${F(cx-r*0.7)} ${F(cy-r*1.3)} ${F(cx)} ${F(cy-r*1.2)} Q${F(cx+r*0.7)} ${F(cy-r*1.3)} ${F(cx+r*0.7)} ${F(cy)} Q${F(cx)} ${F(cy+r*0.5)} ${F(cx-r*0.7)} ${F(cy)} Z" fill="${c}"/>`;
+    case "rosette":{ let s="";
+      for(let i=0;i<3;i++){s+=`<circle cx="${F(cx)}" cy="${F(cy)}" r="${F(r*(1-i*0.3))}" fill="${i%2?"#9f7fe0":(v.lcol||"#8f6fd0")}" opacity="0.92"/>`;}
+      return s; }
+    default: return `<circle cx="${F(cx)}" cy="${F(cy)}" r="${F(r)}" fill="${c}"/>`;
+  }
+}
+/* 葉のペアを描く */
+function dDivLeaf(x,y,deg,lc){ let s=`<g transform="rotate(${deg} ${F(x)} ${F(y)})"><line x1="${F(x)}" y1="${F(y)}" x2="${F(x+18)}" y2="${F(y)}" stroke="${lc}" stroke-width="2"/>`;
+  for(let i=1;i<=3;i++){const mx=x+i*4.5;s+=`<line x1="${F(mx)}" y1="${F(y)}" x2="${F(mx-2)}" y2="${F(y-5)}" stroke="${lc}" stroke-width="1.8"/><line x1="${F(mx)}" y1="${F(y)}" x2="${F(mx-2)}" y2="${F(y+5)}" stroke="${lc}" stroke-width="1.8"/>`;}
+  return s+`</g>`; }
+function dLeafPair(cx,cy,v,sp){ sp=sp||16;const lc=v.lcol||"#3f9468";
+  if(v.leaf==="narrow")
+    return `<path d="M${F(cx)} ${F(cy+4)} L${F(cx-sp)} ${F(cy-14)}" stroke="${lc}" stroke-width="3.4" stroke-linecap="round"/><path d="M${F(cx)} ${F(cy+4)} L${F(cx+sp)} ${F(cy-14)}" stroke="${lc}" stroke-width="3.4" stroke-linecap="round"/>`;
+  if(v.leaf==="divided") return dDivLeaf(cx-sp*0.3,cy,-22,lc)+dDivLeaf(cx+sp*0.3,cy,22,lc);
+  if(v.leaf==="variegated")
+    return `<g transform="rotate(-22 ${F(cx-sp)} ${F(cy)})"><ellipse cx="${F(cx-sp)}" cy="${F(cy)}" rx="15" ry="7" fill="${lc}"/><ellipse cx="${F(cx-sp)}" cy="${F(cy)}" rx="7" ry="3" fill="#d7f0e2"/></g><g transform="rotate(22 ${F(cx+sp)} ${F(cy)})"><ellipse cx="${F(cx+sp)}" cy="${F(cy)}" rx="15" ry="7" fill="${lc}"/><ellipse cx="${F(cx+sp)}" cy="${F(cy)}" rx="7" ry="3" fill="#d7f0e2"/></g>`;
+  if(v.leaf==="pointed")
+    return `<path d="M${F(cx)} ${F(cy)} L${F(cx-sp-2)} ${F(cy-11)} L${F(cx-sp-18)} ${F(cy-3)} Z" fill="${lc}"/><path d="M${F(cx)} ${F(cy)} L${F(cx+sp+2)} ${F(cy-11)} L${F(cx+sp+18)} ${F(cy-3)} Z" fill="${lc}"/>`;
+  return `<ellipse cx="${F(cx-sp)}" cy="${F(cy)}" rx="15" ry="6.5" fill="${lc}" transform="rotate(-25 ${F(cx-sp)} ${F(cy)})"/><ellipse cx="${F(cx+sp)}" cy="${F(cy)}" rx="15" ry="6.5" fill="${lc}" transform="rotate(25 ${F(cx+sp)} ${F(cy)})"/>`;
+}
+const SVG=(b,h)=>`<svg viewBox="0 0 300 ${h||165}" xmlns="http://www.w3.org/2000/svg" role="img">${b}</svg>`;
+const isFoliage=v=>v.flower==="none"||v.flower==="rosette";
+
+/* 花がら摘み（葉のつき方・花のつき方ごとに「切る位置」を描き分け） */
+const nodeRing=(x,y)=>`<circle cx="${x}" cy="${y}" r="6" fill="none" stroke="#ffd23f" stroke-width="2"/>`;
+const fadedSpent=(x,y,r,v)=>`<g opacity="0.45">${dFlower(x,y,r,v)}</g>`;
+function svgDeadhead(v){
+  const soil=`<rect x="50" y="148" width="200" height="13" rx="4" fill="#3a2a18"/>`;
+  const h=v.habit||"opposite";
+
+  /* 葉物：花穂を元から摘む */
+  if(h==="foliage"||isFoliage(v)){
+    const base = v.flower==="rosette" ? dFlower(150,118,20,v) : dLeafPair(150,116,v,20)+dLeafPair(150,102,v,15);
+    let buds=""; for(let i=0;i<4;i++) buds+=`<circle cx="${150+(i%2?5:-5)}" cy="${32+i*8}" r="3.6" fill="#9bbf7a"/>`;
+    return SVG(`${soil}
+      <path d="M150 122 L150 30" stroke="#6f8f5f" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+      ${buds}${base}
+      <text x="150" y="16" font-size="10" fill="#caa9a9" text-anchor="middle">✕ 花穂（葉を楽しむので摘む）</text>
+      <line x1="92" y1="64" x2="208" y2="64" stroke="#ff6b6b" stroke-width="2.6" stroke-dasharray="7 5"/>
+      <text x="62" y="69" font-size="16">✂</text>
+      <text x="214" y="67" font-size="10.5" fill="#ff9b9b">花穂を摘む</text>`);
+  }
+
+  /* 球根：花だけ摘んで葉は残す */
+  if(h==="bulb"){
+    return SVG(`${soil}
+      <path d="M137 150 Q116 96 130 44" stroke="${v.lcol||"#3f9468"}" stroke-width="7" fill="none" stroke-linecap="round"/>
+      <path d="M163 150 Q184 96 170 44" stroke="${v.lcol||"#3f9468"}" stroke-width="7" fill="none" stroke-linecap="round"/>
+      <path d="M150 150 L150 48" stroke="#4fb37a" stroke-width="4" fill="none"/>
+      ${fadedSpent(150,40,12,v)}
+      <text x="150" y="14" font-size="10" fill="#caa9a9" text-anchor="middle">✕ 咲き終わった花</text>
+      <line x1="112" y1="58" x2="188" y2="58" stroke="#ff6b6b" stroke-width="2.6" stroke-dasharray="6 4"/>
+      <text x="84" y="63" font-size="15">✂</text>
+      <text x="192" y="61" font-size="10" fill="#ff9b9b">花だけ摘む</text>
+      <text x="150" y="120" font-size="11" fill="#9fe8bf" text-anchor="middle">◎ 葉は残す（球根を太らせる）</text>`);
+  }
+
+  /* 花穂・花茎が立つ：花穂ごと下の葉の上まで切り下げる */
+  if(h==="tallcut"){
+    return SVG(`${soil}
+      <path d="M150 150 L150 66" stroke="#4fb37a" stroke-width="5" fill="none" stroke-linecap="round"/>
+      ${dLeafPair(150,112,v,16)}
+      ${nodeRing(150,112)}
+      <text x="186" y="116" font-size="9.5" fill="#ffd23f">残す葉</text>
+      ${fadedSpent(150,50,13,v)}
+      <text x="150" y="14" font-size="10" fill="#caa9a9" text-anchor="middle">✕ 咲き終わった花穂</text>
+      <line x1="92" y1="96" x2="208" y2="96" stroke="#ff6b6b" stroke-width="2.6" stroke-dasharray="7 5"/>
+      <text x="62" y="101" font-size="16">✂</text>
+      <text x="214" y="94" font-size="10" fill="#ff9b9b">葉の上で</text>
+      <text x="214" y="105" font-size="10" fill="#ff9b9b">切り下げる</text>`);
+  }
+
+  /* 株元で広がる：花茎を株元で切る／株ごと刈り込み */
+  if(h==="mat"){
+    const stalk=(x,fade)=>`<path d="M150 122 Q${x} 96 ${x} 62" stroke="#4fb37a" stroke-width="3" fill="none"/>`+
+      (fade?fadedSpent(x,54,10,v):dFlower(x,54,10,v));
+    return SVG(`<rect x="40" y="146" width="220" height="13" rx="4" fill="#3a2a18"/>
+      <ellipse cx="150" cy="126" rx="62" ry="20" fill="${v.lcol||"#3f9468"}"/>
+      ${stalk(116,true)}${stalk(150,false)}${stalk(184,false)}
+      <text x="150" y="14" font-size="10" fill="#caa9a9" text-anchor="middle">✕ 終わった花茎（左）は株元で</text>
+      <line x1="98" y1="112" x2="150" y2="112" stroke="#ff6b6b" stroke-width="2.6" stroke-dasharray="6 4"/>
+      <text x="80" y="116" font-size="14">✂</text>
+      <text x="150" y="142" font-size="9.5" fill="#9fe8bf" text-anchor="middle">花茎は株元で切る／乱れたら株ごと刈り込み</text>`);
+  }
+
+  /* 対生・枝咲き（デフォルト）：葉の節の少し上で切る＝節から脇芽 */
+  return SVG(`${soil}
+    <path d="M150 150 L150 40" stroke="#4fb37a" stroke-width="5" fill="none" stroke-linecap="round"/>
+    ${dLeafPair(150,112,v,18)}
+    ${nodeRing(150,112)}
+    <text x="186" y="116" font-size="9.5" fill="#ffd23f">節＝脇芽が出る</text>
+    <path d="M150 112 L139 98 M150 112 L161 98" stroke="#6fe3a0" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    ${fadedSpent(150,33,11,v)}
+    <text x="150" y="15" font-size="10" fill="#caa9a9" text-anchor="middle">✕ 咲き終わった花</text>
+    <line x1="92" y1="84" x2="208" y2="84" stroke="#ff6b6b" stroke-width="2.6" stroke-dasharray="7 5"/>
+    <text x="62" y="89" font-size="16">✂</text>
+    <text x="214" y="82" font-size="10" fill="#ff9b9b">節の</text>
+    <text x="214" y="93" font-size="10" fill="#ff9b9b">少し上で</text>`);
+}
+/* ピンチ（摘心）：先端を摘む → 脇芽が伸びる */
+function svgPinch(v){
+  return SVG(`<rect x="28" y="146" width="84" height="12" rx="4" fill="#3a2a18"/>
+    <path d="M70 148 L70 56" stroke="#4fb37a" stroke-width="5" fill="none" stroke-linecap="round"/>
+    ${dLeafPair(70,112,v,15)}
+    <circle cx="70" cy="50" r="7" fill="#6fe3a0"/>
+    <line x1="44" y1="42" x2="96" y2="42" stroke="#ff6b6b" stroke-width="2.6" stroke-dasharray="6 4"/>
+    <text x="24" y="48" font-size="15">✂</text>
+    <text x="70" y="30" font-size="10.5" fill="#ff9b9b" text-anchor="middle">先端を摘む</text>
+    <text x="150" y="98" font-size="24" fill="#9fe8bf" text-anchor="middle">→</text>
+    <rect x="190" y="146" width="92" height="12" rx="4" fill="#3a2a18"/>
+    <path d="M236 148 L236 96" stroke="#4fb37a" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M236 98 L206 64 M236 98 L266 64" stroke="#4fb37a" stroke-width="4" fill="none" stroke-linecap="round"/>
+    ${dLeafPair(236,116,v,14)}
+    ${dFlower(204,52,12,v)}${dFlower(268,52,12,v)}
+    <text x="236" y="30" font-size="10.5" fill="#9fe8bf" text-anchor="middle">脇芽が伸び花数UP</text>`);
+}
+/* 切り戻し：間延び → 節の上でカット → こんもり再生 */
+function svgCutback(v){
+  return SVG(`<rect x="26" y="146" width="86" height="12" rx="4" fill="#3a2a18"/>
+    <path d="M70 148 L50 40" stroke="#4fb37a" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+    <path d="M70 148 L90 44" stroke="#4fb37a" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+    <path d="M70 148 L70 34" stroke="#4fb37a" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+    ${dFlower(48,36,7,v)}${dFlower(70,28,7,v)}${dFlower(92,40,7,v)}
+    ${dLeafPair(70,98,v,14)}
+    ${nodeRing(70,98)}
+    <line x1="34" y1="90" x2="106" y2="90" stroke="#ff6b6b" stroke-width="2.6" stroke-dasharray="6 4"/>
+    <text x="18" y="95" font-size="14">✂</text>
+    <text x="70" y="114" font-size="10" fill="#ff9b9b" text-anchor="middle">節の少し上で</text>
+    <text x="70" y="126" font-size="10" fill="#ff9b9b" text-anchor="middle">1/3〜1/2カット</text>
+    <text x="150" y="92" font-size="24" fill="#9fe8bf" text-anchor="middle">→</text>
+    <rect x="188" y="146" width="92" height="12" rx="4" fill="#3a2a18"/>
+    <path d="M234 148 L234 98" stroke="#4fb37a" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M234 100 L206 70 M234 100 L234 58 M234 100 L262 70" stroke="#4fb37a" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+    ${dFlower(204,64,9,v)}${dFlower(234,52,9,v)}${dFlower(264,64,9,v)}
+    <text x="234" y="34" font-size="10.5" fill="#9fe8bf" text-anchor="middle">こんもり再生</text>`);
+}
+/* 刈り込み：木質化する花（ラベンダー）は古枝注意つき／宿根マウンドは全体刈り */
+function svgPrune(v){
+  const mound=`<path d="M150 110 C100 110 96 60 150 52 C204 60 200 110 150 110 Z" fill="${v.lcol||"#3f9468"}"/>`;
+  const flowers = v.flower==="spike"
+    ? dFlower(122,72,9,v)+dFlower(150,64,9,v)+dFlower(178,72,9,v)
+    : dFlower(120,58,8,v)+dFlower(150,52,8,v)+dFlower(180,58,8,v);
+  if(v.woody){
+    return SVG(`<rect x="40" y="144" width="220" height="12" rx="4" fill="#3a2a18"/>
+      <rect x="104" y="108" width="92" height="38" rx="6" fill="#5a4632"/>
+      <text x="150" y="140" font-size="9" fill="#d8b48c" text-anchor="middle">古い枝（茶・葉なし）</text>
+      ${mound}${flowers}
+      <line x1="96" y1="92" x2="204" y2="92" stroke="#ff6b6b" stroke-width="2.6" stroke-dasharray="6 4"/>
+      <text x="66" y="97" font-size="14">✂</text>
+      <text x="207" y="90" font-size="9.5" fill="#ff9b9b">◎ここで切る</text>
+      <text x="207" y="101" font-size="9" fill="#9fe8bf">緑を残す</text>
+      <line x1="108" y1="126" x2="192" y2="126" stroke="#9a9a9a" stroke-width="2" stroke-dasharray="2 4"/>
+      <text x="150" y="122" font-size="9.5" fill="#cfcf9a" text-anchor="middle">✕ ここまで切らない（枯れる）</text>`,160);
+  }
+  return SVG(`<rect x="40" y="144" width="220" height="12" rx="4" fill="#3a2a18"/>
+    <path d="M150 144 L150 110" stroke="#4fb37a" stroke-width="4"/>
+    ${mound}${flowers}
+    <line x1="92" y1="86" x2="208" y2="86" stroke="#ff6b6b" stroke-width="2.6" stroke-dasharray="6 4"/>
+    <text x="62" y="91" font-size="14">✂</text>
+    <text x="214" y="89" font-size="10" fill="#ff9b9b">全体を1/3〜1/2</text>
+    <text x="150" y="134" font-size="10" fill="#9fe8bf" text-anchor="middle">株ごと刈り込んで更新・蒸れ防止</text>`,160);
+}
+
+/* ---------- 季節・日照・症状 ---------- */
+const SEASONS = [
+  {key:"spring", label:"🌸 春 3〜5月"},
+  {key:"summer", label:"☀ 夏 6〜8月"},
+  {key:"autumn", label:"🍂 秋 9〜11月"},
+  {key:"winter", label:"❄ 冬 12〜2月"}
+];
+const SUNS = [
+  {key:"sun",  label:"☀ 日向"},
+  {key:"half", label:"⛅ 半日陰"},
+  {key:"shade",label:"🌑 日陰"}
+];
+const SYMPTOMS = {
+  healthy:"元気（特に問題なし）",
+  lessflower:"花が減ってきた／咲き終わりが多い",
+  leggy:"間延び（徒長）して倒れる",
+  yellowleaf:"下葉が黄色い",
+  wilt_dry:"しおれる（土が乾いている）",
+  wilt_wet:"しおれる（土が湿っている）",
+  powder:"葉に白い粉",
+  graymold:"灰色のカビ・花が腐る",
+  aphid:"新芽・つぼみに小さい虫の群れ",
+  nightbug:"夜に葉が食われる・フン"
+};
+
+/* ---------- 2.2 季節の植え替えカレンダー ---------- */
+const SEASON_PLAN = {
+  spring:{ name:"春花壇（3〜5月）",
+    txt:"パンジー・ビオラが最盛期。ゴールデンウィーク頃を目安に、暑さに強い夏花へ植え替える準備を。",
+    rec:["マリーゴールド","ニチニチソウ","メランポジウム","ジニア","サルビア"] },
+  summer:{ name:"夏花壇（6〜9月）",
+    txt:"高温と乾燥、そして梅雨の過湿に耐える種で。蒸れ対策に株間を広めにとる。",
+    rec:["ニチニチソウ","メランポジウム","マリーゴールド","ジニア","サルビア","ガウラ"] },
+  autumn:{ name:"秋花壇（10〜11月）",
+    txt:"コスモスや観賞用トウガラシ、秋植え球根の仕込み時期。パンジー類の植付けもこの頃から開始。",
+    rec:["コスモス","観賞用トウガラシ","パンジー・ビオラ（植付け開始）","エリゲロン","秋植え球根"] },
+  winter:{ name:"冬花壇（12〜2月）",
+    txt:"耐寒性のある種で。霜に当たっても育つ顔ぶれを主役に。",
+    rec:["パンジー・ビオラ","葉ボタン","ラミウム（葉物）"] }
+};
+
+/* =================================================================
+   状態・初期化
+================================================================= */
+const state = { plant:"nichinichi", season:"summer", sun:"sun", symptom:"healthy" };
+
+const selPlant = document.getElementById("selPlant");
+PLANT_ORDER.forEach(k=>{
+  const o=document.createElement("option");
+  o.value=k; o.textContent=PLANTS[k].name; selPlant.appendChild(o);
+});
+selPlant.value=state.plant;
+
+const selSymptom = document.getElementById("selSymptom");
+Object.keys(SYMPTOMS).forEach(k=>{
+  const o=document.createElement("option");
+  o.value=k; o.textContent=SYMPTOMS[k]; selSymptom.appendChild(o);
+});
+selSymptom.value=state.symptom;
+
+/* 季節ボタン */
+const seasonRow=document.getElementById("seasonRow");
+SEASONS.forEach(s=>{
+  const b=document.createElement("button");
+  b.className="chip"+(s.key===state.season?" active":"");
+  b.textContent=s.label; b.dataset.k=s.key;
+  b.onclick=()=>{state.season=s.key; markRow(seasonRow,s.key); render();};
+  seasonRow.appendChild(b);
+});
+/* 日照ボタン */
+const sunRow=document.getElementById("sunRow");
+SUNS.forEach(s=>{
+  const b=document.createElement("button");
+  b.className="chip"+(s.key===state.sun?" active":"");
+  b.textContent=s.label; b.dataset.k=s.key;
+  b.onclick=()=>{state.sun=s.key; markRow(sunRow,s.key); render();};
+  sunRow.appendChild(b);
+});
+function markRow(row,k){
+  [...row.children].forEach(c=>c.classList.toggle("active",c.dataset.k===k));
+}
+selPlant.onchange=()=>{state.plant=selPlant.value; render();};
+selSymptom.onchange=()=>{state.symptom=selSymptom.value; render();};
+
+/* =================================================================
+   診断ロジック（2.3 症状→対処 ＋ 2.4 季節アラート）
+================================================================= */
+function diagnose(){
+  const p=PLANTS[state.plant];
+  const sym=state.symptom, season=state.season, sun=state.sun;
+  let level=0;             // 0=緑 1=黄 2=赤
+  const dos=[];            // {ic, body, urgent}
+  const alerts=[];         // 季節アラート文
+
+  /* --- 症状別の処方 --- */
+  switch(sym){
+    case "healthy":
+      dos.push({ic:"✅",body:"今は<b>良好</b>。<b>花がら摘み</b>と適切な水やりを続け、開花の勢いを維持しましょう。"});
+      break;
+    case "lessflower":
+      level=Math.max(level,1);
+      dos.push({ic:"✂",body:"咲き終わった花を摘む<b>花がら摘み</b>。種に栄養が回るのを防ぎ、次のつぼみを促します。"});
+      dos.push({ic:"💧",body:"開花で消耗しているので<b>追肥（液肥）</b>を1〜2週に1回。リン酸分が花つきを助けます。"});
+      if(p.type.indexOf("一年草")>=0){
+        dos.push({ic:"📅",body:"一年草は<b>花期の終盤が近い</b>可能性も。"+
+          "花数が戻らなければ次の季節の花への<b>植え替え</b>を検討。"});
+      }
+      break;
+    case "leggy":
+      level=Math.max(level,1);
+      dos.push({ic:"✂",body:"間延び（<b>徒長</b>）には<b>切り戻し</b>。草丈の1/3〜1/2を刈り込むと、脇芽が出てこんもり再生します。"});
+      if(sun==="shade"||sun==="half"){
+        level=Math.max(level,1);
+        dos.push({ic:"☀",body:"<b>日照不足</b>が徒長の主因です。より日当たりのよい場所へ移すか、まわりの茂りを整理して光を入れて。",urgent:false});
+      }else{
+        dos.push({ic:"🌱",body:"日当たりは確保できています。<b>窒素肥料の与えすぎ</b>も徒長の一因。肥料は控えめに。"});
+      }
+      break;
+    case "yellowleaf":
+      level=Math.max(level,1);
+      dos.push({ic:"💧",body:"下葉の黄変は<b>肥料切れ</b>のサイン。まずは<b>追肥</b>を。"});
+      dos.push({ic:"⚠",body:"ただし<b>過湿による根腐れ</b>でも下葉は黄色くなります。土が常に湿っていないか、<b>水やり頻度</b>を必ず確認。"});
+      break;
+    case "wilt_dry":
+      level=Math.max(level,1);
+      dos.push({ic:"💧",body:"典型的な<b>水切れ</b>。<b>朝夕にたっぷり灌水</b>を。夏は気温が上がる前の<b>早朝の水やり</b>が基本です。"});
+      if(season==="summer"){
+        dos.push({ic:"🌿",body:"株元に<b>マルチング</b>（バークや敷きわら）で土の乾燥と地温上昇を抑えると効果的。"});
+      }
+      break;
+    case "wilt_wet":
+      level=Math.max(level,2);
+      dos.push({ic:"🛑",body:"土が湿っているのにしおれるのは<b>根腐れ・過湿</b>の危険信号。",urgent:true});
+      dos.push({ic:"💧",body:"<b>水やりを止め</b>、土を乾かす。鉢なら受け皿の水を捨て、花壇なら<b>排水と通風</b>を改善。"});
+      dos.push({ic:"✂",body:"傷んだ根・葉を整理し、密植なら間引いて風を通します。"});
+      break;
+    case "powder":
+      level=Math.max(level,1);
+      dos.push({ic:"🍃",body:"白い粉は<b>うどんこ病</b>。<b>風通しの改善・密植回避</b>が第一。茂りすぎた葉を整理。"});
+      dos.push({ic:"🧴",body:"広がる場合は早めに<b>薬剤（殺菌剤）</b>を。発病葉は取り除いて処分（畑に残さない）。"});
+      break;
+    case "graymold":
+      level=Math.max(level,2);
+      dos.push({ic:"🛑",body:"灰色のカビ・花腐れは<b>灰色かび病（ボトリチス）</b>。多湿で一気に広がります。",urgent:true});
+      dos.push({ic:"✂",body:"傷んだ花・葉を<b>すぐに除去</b>。株を乾かし、<b>雨や過湿を避け通風を確保</b>。"});
+      dos.push({ic:"🧴",body:"必要に応じ殺菌剤。込み合った花がらを残さないことが最大の予防です。"});
+      break;
+    case "aphid":
+      level=Math.max(level,1);
+      dos.push({ic:"🐛",body:"新芽・つぼみの群れは<b>アブラムシ</b>。ウイルスも媒介するので<b>見つけ次第すぐ防除</b>。"});
+      dos.push({ic:"🧴",body:"少数なら粘着テープや水流で除去、多ければ薬剤。<b>マリーゴールド等の混植</b>や天敵（テントウムシ）も助けに。"});
+      break;
+    case "nightbug":
+      level=Math.max(level,1);
+      dos.push({ic:"🌙",body:"夜の食害は<b>ヨトウムシ・ナメクジ</b>。昼間は土中や鉢裏に隠れています。"});
+      dos.push({ic:"🔦",body:"<b>夜間に見回って捕殺</b>、または<b>誘殺剤</b>を設置。株元の落ち葉を片づけ隠れ場所を減らす。"});
+      break;
+  }
+
+  /* --- 2.4 季節アラート（植物特性と掛け合わせ） --- */
+  const pansyLike = (state.plant==="pansy");
+  if(season==="summer"){
+    alerts.push("夏は<b>高温・乾燥・梅雨の過湿と蒸れ</b>に最大の注意。株間を空け風を通して。");
+    if(pansyLike){ level=Math.max(level,2);
+      alerts.push("⚠ パンジー・ビオラは<b>暑さで寿命を迎える時期</b>。夏花壇への植え替えどきです。"); }
+    if(p.heat.indexOf("×")>=0 && !pansyLike){ level=Math.max(level,1);
+      alerts.push("この植物は暑さがやや苦手。半日陰・水管理・蒸れ対策を手厚く。"); }
+    if(state.plant==="lavender"){ level=Math.max(level,1);
+      alerts.push("ラベンダーは梅雨の蒸れに弱い。花後に1/2に切り戻して風を通すと夏越しが楽に。"); }
+  }
+  if(season==="winter"){
+    alerts.push("冬は<b>霜・凍結</b>に注意。");
+    if(p.hardy.indexOf("×")>=0){ level=Math.max(level,2);
+      alerts.push("⚠ この植物は<b>非耐寒性</b>。屋外の花壇では冬に枯れます。鉢で軒下・室内へ取り込みを。"); }
+  }
+  if(season==="spring" && pansyLike){
+    alerts.push("春はパンジー・ビオラの最盛期。花がら摘みを欠かさず、GW頃の植え替えを見据えて。");
+  }
+  alerts.push("通年：同じ科の花を同じ場所で続ける<b>連作障害</b>に注意。土のリフレッシュや場所替えを。");
+
+  /* --- 日照ミスマッチの軽い警告 --- */
+  let sunNote="";
+  const wantSun=p.sun;
+  if(state.sun==="shade" && wantSun.indexOf("日向")>=0){
+    level=Math.max(level,1);
+    sunNote="この植物は本来<b>日向向き</b>。日陰では花つきが悪く徒長しやすいので、より明るい場所が理想です。";
+  }else if(state.sun==="sun" && (state.plant==="lamium"||state.plant==="coleus")){
+    sunNote="この植物は<b>半日陰〜日陰</b>を好みます。真夏の強い直射では葉焼けに注意。";
+  }
+
+  return {level, dos, alerts, sunNote, plant:p};
+}
+
+/* =================================================================
+   描画
+================================================================= */
+const CONDMAP=[
+  {cls:"good", label:"良好", desc:"このまま管理を継続", emoji:"🟢"},
+  {cls:"warn", label:"要対応", desc:"早めの手当てを", emoji:"🟡"},
+  {cls:"bad",  label:"危険",  desc:"今すぐ対処が必要", emoji:"🔴"}
+];
+
+function render(){
+  const d=diagnose();
+  const p=d.plant;
+  const c=CARE[state.plant]||{};
+  const cm=CONDMAP[d.level];
+  const out=document.getElementById("output");
+
+  /* 作業リスト */
+  let doHtml="";
+  d.dos.forEach(x=>{
+    doHtml+=`<div class="do-item${x.urgent?' urgent':''}"><div class="ic">${x.ic}</div><div class="body">${x.body}</div></div>`;
+  });
+
+  /* 季節プラン */
+  const sp=SEASON_PLAN[state.season];
+  const recTags=sp.rec.map(r=>`<span class="tag">${r}</span>`).join("");
+
+  /* 作業イラスト（葉・花のつき方ごとに「切る位置」を描き分け） */
+  const v=PLANT_VIS[state.plant]||PLANT_VIS.other_annual;
+  const h=v.habit||"opposite";
+  const hb=HABIT[h];
+  const fig=(svg,cap)=>`<div class="care-fig">${svg}<div class="cap">${cap}</div></div>`;
+  /* 花がら摘み図のキャプション（型ごと） */
+  const DEAD_CAP={
+    opposite:"<b>花がら摘み</b><br>咲き終わった花を、その下の<b>葉の節の少し上</b>で切る。黄丸の節から脇芽が伸びる。",
+    tallcut:"<b>花がら摘み（花穂切り）</b><br>終わった<b>花穂ごと、下の葉のすぐ上</b>まで切り下げる。残した葉からまた立ち上がる。",
+    mat:"<b>花がら摘み</b><br>花茎を<b>株元（葉の上）で</b>切る。全体が乱れたら株ごと刈り込んで更新。",
+    bulb:"<b>花がら摘み</b><br><b>花だけ摘み、葉は黄ばむまで残す</b>。葉が来年の球根を太らせる。",
+    foliage:"<b>花がら摘み（花穂取り）</b><br>葉を楽しむ花。伸びた<b>花穂は元から摘む</b>と葉色が長持ち。"
+  };
+  let figs=fig(svgDeadhead(v), DEAD_CAP[h]||DEAD_CAP.opposite);
+  /* 型ごとに必要な図だけ出す */
+  if(h==="opposite"||h==="tallcut"){
+    figs+=fig(svgPinch(v),
+      "<b>ピンチ（摘心）</b><br>若い苗の<b>先端を摘む</b>と、下の脇芽が伸びて枝数が増え、こんもり茂って花数UP。");
+    figs+=fig(svgCutback(v),
+      "<b>切り戻し</b><br>間延びしたら<b>節（黄丸）の少し上で全体を1/3〜1/2</b>カット。脇芽が吹いて再びこんもり。");
+  }else if(h==="foliage"){
+    figs+=fig(svgPinch(v),
+      "<b>ピンチ（摘心）</b><br>先端を摘むと枝分かれして<b>葉が密に茂り、葉色も冴える</b>。");
+  }
+  /* 刈り込み図は実際に刈り込む花だけ（c.pruneに「刈り込」を含む種） */
+  if(/刈り込/.test(c.prune||"")){
+    figs+=fig(svgPrune(v), v.woody
+      ? "<b>刈り込み・剪定</b><br>花後に刈る。ラベンダー等は<b>緑の葉を必ず残す位置</b>で。茶色い古枝まで切ると枯れる。"
+      : "<b>刈り込み・更新</b><br>花が一巡して乱れたら<b>株ごと1/3〜1/2刈り込む</b>と、再び咲き蒸れも防げる。");
+  }
+  const figCols = (figs.match(/care-fig/g)||[]).length>=2 ? "two" : "";
+  /* この花の「切り方」要点バナー */
+  const cutGuide=`<div class="cutguide">
+      <div class="cg-head">✂ ${p.name}の切り方　<span class="cg-tag">${hb.leaf}</span></div>
+      <div class="cg-rule">${hb.rule}</div></div>`;
+
+  out.innerHTML=`
+    <div class="cond ${cm.cls}">
+      <div class="light" style="background:currentColor"></div>
+      <div class="txt">
+        <div class="label">${cm.emoji} 総合コンディション：${cm.label}</div>
+        <div class="desc">${cm.desc}</div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h3>🛠 今やるべき作業</h3>
+      <div class="sec-in">${doHtml}
+      ${d.sunNote?`<div class="do-item"><div class="ic">🧭</div><div class="body">${d.sunNote}</div></div>`:""}
+      </div>
+    </div>
+
+    <div class="sec">
+      <h3>📖 この植物の特性・注意 ── ${p.name}</h3>
+      <div class="sec-in">
+        <div style="margin-bottom:8px">
+          <span class="tag">${p.type}</span>
+          <span class="tag cold">耐寒 ${p.hardy}</span>
+          <span class="tag hot">耐暑 ${p.heat}</span>
+          <span class="tag life">花期 ${p.bloom}</span>
+          <span class="tag">適：${p.sun}</span>
+        </div>
+        <div>${p.note}</div>
+      </div>
+    </div>
+
+    <div class="sec care">
+      <h3>✂ 植えたあとのお手入れ ── ${p.name}</h3>
+      <div class="sec-in">
+        <div class="care-item"><div class="care-ic">🌸</div><div><b>花がら摘み</b><br>${c.deadhead||"咲き終わりをこまめに摘む。"}</div></div>
+        <div class="care-item"><div class="care-ic">✂</div><div><b>切り戻し・ピンチ（高さ・株姿を整える）</b><br>${c.pinch||"伸びすぎ・間延びしたら切り戻す。"}</div></div>
+        <div class="care-item"><div class="care-ic">🪴</div><div><b>剪定・刈り込み・更新</b><br>${c.prune||"花後に整える。"}</div></div>
+
+        ${cutGuide}
+        <div class="fig-title">📐 切る位置の図解（この花の葉・花のつき方に合わせています）<span class="legend"><span class="ln">- - -</span> 赤い点線＝切るライン</span></div>
+        <div class="care-figs ${figCols}">${figs}</div>
+      </div>
+    </div>
+
+    <div class="sec env">
+      <h3>🌍 好む環境 ── ${p.name}</h3>
+      <div class="sec-in">
+        <div class="env-line"><span class="env-ic">☀</span><div>${c.env||p.note}</div></div>
+        <div class="env-line"><span class="env-ic">💧</span><div><b>水やり：</b>${c.water||"土の表面が乾いたらたっぷり。"}</div></div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h3>🌦 季節アラート</h3>
+      <div class="sec-in"><ul>${d.alerts.map(a=>`<li>${a}</li>`).join("")}</ul></div>
+    </div>
+
+    <div class="sec">
+      <h3>🌷 季節の花壇プラン提案</h3>
+      <div class="sec-in">
+        <div class="plan-box">
+          <div class="season-name">${sp.name}</div>
+          <div style="margin:6px 0 8px">${sp.txt}</div>
+          <div><b style="color:var(--accent2)">この季節に植えるなら：</b><br>${recTags}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/* =================================================================
+   B. 園芸プロ・チャット（オフライン擬似AI：キーワード辞書）
+================================================================= */
+const chatLog=document.getElementById("chatLog");
+function addMsg(text, who){
+  const m=document.createElement("div");
+  m.className="msg"+(who==="user"?" user":"");
+  m.innerHTML = who==="user"
+    ? `<div class="av">🧑</div><div class="bubble">${text}</div>`
+    : `<div class="av">🧑‍🌾</div><div class="bubble"><div class="name">みどり親方</div>${text}</div>`;
+  chatLog.appendChild(m);
+  chatLog.scrollTop=chatLog.scrollHeight;
+}
+
+/* プリセット回答 */
+const PRESET_ANS={
+  "pansy-summer":
+    "ええ質問やね。<b>パンジー・ビオラ</b>は秋に植えて冬の寒さの中で咲く<b>秋植え一年草</b>でな、"+
+    "もともと冷涼な気候の花なんや。気温が25℃を超える初夏になると、株がもう生理的に寿命を迎える。"+
+    "高温多湿で根も傷みやすうなって、ゴールデンウィークを過ぎる頃に弱って枯れていく。"+
+    "これは病気やのうて<b>季節の役目を終えた</b>ということ。だから夏はニチニチソウやマリーゴールドへ<b>植え替え</b>てやるのが筋や。",
+  "deadhead":
+    "<b>花がら摘み</b>はな、咲き終わった花を摘み取る作業や。なんで要るかというと、花が終わると植物は"+
+    "<b>種をつくる方</b>に栄養を回し始める。そうなると新しいつぼみが上がってこんようになるんや。"+
+    "花がらをこまめに摘めば、植物は『まだ子孫を残せてへん』と次の花を咲かせ続ける。"+
+    "おまけに腐った花を残さんことで<b>灰色かび病</b>の予防にもなる。地味やけど一番効く手入れやで。",
+  "marigold":
+    "ほんまの話や。<b>マリーゴールド</b>の根からは特有の分泌物が出て、土の中の<b>センチュウ（線虫）</b>の"+
+    "増殖を抑える働きがある。野菜の隣に植える<b>コンパニオンプランツ</b>として昔からよう使われとる。"+
+    "それに独特の香りでアブラムシなどを寄せつけにくい効果も期待できる。ただし万能やない――"+
+    "あくまで<b>補助</b>として、花壇の縁取りや畝の間に混ぜてやる感覚やな。花期も長うて一石二鳥や。",
+  "rainy":
+    "梅雨はわしらガーデナーの正念場や。コツは<b>とにかく蒸らさんこと</b>。"+
+    "①<b>花がら・傷んだ葉をこまめに除去</b>して<b>灰色かび病</b>の元を断つ。"+
+    "②<b>株間を空け、混んだ枝を整理</b>して風を通す。"+
+    "③長雨が続く鉢は軒下へ移し、<b>水のやり過ぎを止める</b>。"+
+    "④<b>水はけ</b>の悪い花壇は土を高うして排水を良うする。"+
+    "ニチニチソウやペチュニアは特に過湿に弱いさかい、雨上がりに腐ってへんか必ず見回りや。"
+};
+
+document.getElementById("presetRow").addEventListener("click",e=>{
+  const btn=e.target.closest("button"); if(!btn)return;
+  if(btn.dataset.act==="reason"){ explainReason(); return; }
+  if(btn.dataset.act==="care"){ explainCare(); return; }
+  const q=btn.dataset.q;
+  addMsg(btn.textContent, "user");
+  setTimeout(()=>addMsg(PRESET_ANS[q]||"うーん、それはまた今度詳しゅう話そか。", "bot"),250);
+});
+
+/* 「この花のお手入れ」── 現在選択中の花の手入れ＆環境を親方が解説 */
+function explainCare(){
+  const p=PLANTS[state.plant]; const c=CARE[state.plant]||{};
+  addMsg(`${p.name}のお手入れと好む環境を教えて`, "user");
+  let body=`おう、<b>${p.name}</b>やな。植えたあとはこう手をかけてやると見違えるで。<br><br>`+
+    `<b>🌸 花がら摘み</b><br>${c.deadhead||""}<br><br>`+
+    `<b>✂ 切り戻し・ピンチ（高さと株姿）</b><br>${c.pinch||""}<br><br>`+
+    `<b>🪴 剪定・刈り込み</b><br>${c.prune||""}<br><br>`+
+    `<b>🌍 好む環境</b><br>${c.env||p.note}<br><br>`+
+    `<b>💧 水やり</b><br>${c.water||""}<br><br>`+
+    `要するにな、この花は『${(p.tags||[]).join("・")}』が身上や。そこを外さんようにしてやれば長う咲くで。`;
+  setTimeout(()=>addMsg(body, "bot"),250);
+}
+
+/* 「診断結果の理由を教えて」── 現在の選択を動的に解説 */
+function explainReason(){
+  const d=diagnose(); const p=d.plant;
+  const seasonLabel=SEASONS.find(s=>s.key===state.season).label;
+  const sunLabel=SUNS.find(s=>s.key===state.sun).label;
+  const cm=CONDMAP[d.level];
+  addMsg("いまの診断結果の理由を教えて", "user");
+  let body=`今回の見立てはこうや。<b>${p.name}</b>（${p.type}）を<b>${seasonLabel}</b>・<b>${sunLabel}</b>の条件で、`+
+    `症状は「<b>${SYMPTOMS[state.symptom]}</b>」やったな。<br><br>`;
+  body+=`まず総合判定は<b>${cm.emoji}${cm.label}</b>。これはな、`;
+  /* 主因 */
+  const reasons=[];
+  if(state.symptom!=="healthy"){
+    reasons.push(`症状の「${SYMPTOMS[state.symptom]}」から導いた処方が効くからや`);
+  }else{
+    reasons.push("目立つ症状がないからや");
+  }
+  if(state.season==="summer" && (state.plant==="pansy"||p.heat.indexOf("×")>=0))
+    reasons.push("夏の暑さがこの植物には負担で、季節要因で点を下げとる");
+  if(state.season==="winter" && p.hardy.indexOf("×")>=0)
+    reasons.push("非耐寒性やから冬の屋外は危険、と判断しとる");
+  if(d.sunNote) reasons.push("日照条件がこの植物の好みと少しズレとる");
+  body+=reasons.join("、")+"。<br><br>";
+  /* やること要約 */
+  body+="<b>具体的にやることは：</b><br>";
+  body+=d.dos.map(x=>"・"+x.body.replace(/<[^>]+>/g,m=>m)).join("<br>");
+  body+="<br><br>"+p.note;
+  setTimeout(()=>addMsg(body, "bot"),250);
+}
+
+/* 自由入力：キーワード辞書 */
+const KW=[
+  {k:["花がら","花殻","摘み","摘ま","ガラ"], a:PRESET_ANS["deadhead"]},
+  {k:["徒長","間延び","ひょろ","のび","伸びすぎ"],
+   a:"<b>徒長（とちょう）</b>いうのは、日照不足や肥料（特に窒素）の与えすぎで、茎ばかりがひょろっと"+
+     "間延びして弱々しゅうなる状態や。倒れやすく花つきも悪い。対処は<b>切り戻し</b>で1/3〜1/2刈り込んで"+
+     "脇芽を出させ、<b>日当たりを良う</b>してやること。原因を断たな、また伸びてまうで。"},
+  {k:["切り戻","刈り込","カットバック"],
+   a:"<b>切り戻し</b>は、伸びて乱れた株を思い切って刈り込んで仕立て直す作業や。ペチュニアや宿根バーベナ、"+
+     "ガウラなんかは中ほどまでバッサリやると、脇芽が吹いて<b>こんもり再生</b>して花がまた上がる。"+
+     "梅雨前や真夏前にやると蒸れ防止にもなるで。"},
+  {k:["追肥","肥料","元肥","液肥","ひりょう"],
+   a:"<b>追肥（ついひ）</b>は生育・開花の途中で補う肥料のこと。花をたくさん咲かせる草花は栄養を食うさかい、"+
+     "<b>液肥なら1〜2週に1回、緩効性の置き肥なら月1回</b>が目安や。花つきを良うするにはリン酸分の多い肥料を。"+
+     "ただしコスモスみたいに痩せ地を好む花は<b>やり過ぎると倒れる</b>。植物で加減せなあかん。"},
+  {k:["うどん","白い粉","白い","ウドンコ"],
+   a:"<b>うどんこ病</b>やな。葉の表面に小麦粉をまぶしたような白いカビが出る。風通しの悪い・"+
+     "窒素過多・乾湿の差が大きい時に出やすい。<b>密植を避け風を通す</b>のが一番。発病葉は取って処分し、"+
+     "広がるなら殺菌剤を。ジニアや一部の宿根草で梅雨〜秋に注意や。"},
+  {k:["灰色","カビ","ボトリチス","花腐","腐"],
+   a:"<b>灰色かび病（ボトリチス）</b>。多湿で花や葉に灰色のふわっとしたカビが出て腐っていく。"+
+     "梅雨と秋雨が要注意や。<b>傷んだ花・葉をすぐ除去</b>し、<b>過湿と雨を避けて通風</b>を確保。"+
+     "花がらをためんことが最大の予防やで。"},
+  {k:["アブラムシ","あぶら","新芽の虫","小さい虫"],
+   a:"<b>アブラムシ</b>は新芽やつぼみに群がって汁を吸い、ウイルス病も運ぶ厄介者や。<b>見つけ次第</b>"+
+     "テープや水流で落とすか薬剤を。<b>マリーゴールドの混植</b>やテントウムシなどの天敵も助けになる。"+
+     "窒素のやり過ぎは発生を増やすので肥料は控えめに。"},
+  {k:["ヨトウ","ナメクジ","夜","食害","食わ"],
+   a:"夜に葉が食われてフンが落ちとるなら<b>ヨトウムシ</b>か<b>ナメクジ</b>や。昼は土中や鉢裏に隠れとる。"+
+     "<b>夜間に見回って捕殺</b>するのが確実。<b>誘殺剤</b>を株元に置き、落ち葉を片づけて隠れ家を減らすこと。"},
+  {k:["根腐","過湿","しおれ","萎れ","しなび","土が湿"],
+   a:"土が湿っとるのにしおれるのは<b>根腐れ</b>のサインや。水のやり過ぎや水はけの悪さで根が酸欠になって傷む。"+
+     "<b>水やりを止めて土を乾かし</b>、排水と通風を良うする。ニチニチソウやラベンダーみたいな過湿嫌いの花は特に注意やで。"},
+  {k:["水やり","灌水","水を","みずやり","水は"],
+   a:"水やりの基本は<b>『土の表面が乾いたらたっぷり』</b>。回数より<b>メリハリ</b>や。"+
+     "夏は気温の上がる前の<b>早朝</b>にたっぷりと。日中の暑い時間の水やりは根を傷めるさかい避ける。"+
+     "逆に過湿を嫌う花は乾かし気味に。植物の性質に合わせて加減してや。"},
+  {k:["コンパニオン","混植","一緒に植え","相性"],
+   a:"<b>コンパニオンプランツ</b>は、互いに良い影響を与え合う植え合わせのことや。"+
+     "<b>マリーゴールド</b>はセンチュウ抑制で有名やな。香りの強いハーブで害虫を遠ざけたりもする。"+
+     "花壇でも縁取りに混ぜると見た目も虫対策も一石二鳥や。"},
+  {k:["宿根","多年草","植えっぱなし","しゅっこん"],
+   a:"<b>宿根草（多年草）</b>は一度植えれば数年楽しめる花や。ガウラ、宿根バーベナ、エリゲロンなんかがそう。"+
+     "<b>花後の切り戻し</b>で姿を整え、<b>数年に一度の株分け</b>で若返らせる。一年草と組み合わせると花壇の管理が楽になるで。"},
+  {k:["球根","掘り上げ","チューリップ","スイセン","ほりあげ"],
+   a:"<b>球根</b>は花後の<b>葉を残して球根を太らせる</b>のが鉄則や。葉が黄ばんで枯れてから始末する。"+
+     "<b>チューリップ</b>は基本掘り上げて夏は冷暗所で保管、<b>スイセン</b>は植えっぱなしでも数年咲く。種類で扱いが違うで。"},
+  {k:["半日陰","日陰","日照","ひかげ","日当たり"],
+   a:"<b>半日陰</b>は、午前だけ日が当たる・木漏れ日が差すような明るい日陰のこと。コリウスやラミウムは"+
+     "ここが得意や。逆に日向の花を日陰に植えると<b>徒長して花つきが悪う</b>なる。植物の適性を見て場所を選ぶのが肝心やで。"},
+  {k:["連作","土","リフレッシュ"],
+   a:"同じ科の花を同じ場所で続けると<b>連作障害</b>が出て育ちが悪うなる。土の中の養分が偏り、"+
+     "病害虫もたまるからや。<b>植える場所を替える</b>、<b>古い土をリフレッシュ</b>する（ふるって堆肥を足す）"+
+     "といった手入れで防げる。花壇のローテーションを意識してや。"},
+  {k:["ピンチ","摘心","てきしん","脇芽","わき芽"],
+   a:"<b>ピンチ（摘心）</b>は、若い苗のうちに枝の<b>先端を摘み取る</b>作業や。先端を止めると下の<b>脇芽</b>が伸び出して"+
+     "枝数が増え、こんもりした株になって花数もぐっと増える。ニチニチソウ・マリーゴールド・コリウス・ジニアなんかで効果的や。"+
+     "コリウスは繰り返しやるほど葉色も冴えるで。"},
+  {k:["高さ","草丈","背丈","低く","コンパクト","倒れ"],
+   a:"<b>高さを抑える</b>には二段構えや。①植えた直後に<b>ピンチ（摘心）</b>して低い位置で枝分かれさせる。"+
+     "②伸びてきたら<b>切り戻し</b>で好きな高さにカット。ガウラやコスモスのように倒れやすい花は、初夏のピンチと支柱で備える。"+
+     "切り戻すと一時花は減るが、脇芽が吹いてすぐまた咲くから心配いらん。"},
+  {k:["剪定","刈り込","せんてい"],
+   a:"草花の<b>剪定・刈り込み</b>は、形を整え風を通し、株を更新するための作業や。宿根草やラベンダーは"+
+     "<b>花後に1/3〜1/2刈り込む</b>と蒸れを防ぎ再び咲く。ただしラベンダーは葉のない茶色い古枝まで切ると枯れるさかい、"+
+     "<b>緑の葉を残す位置で</b>止めるのが鉄則や。ラミウムやエリゲロンは乱れたら株ごと刈って葉を吹き直させる。"},
+  {k:["手入れ","お手入れ","育て方","そだてかた","環境","好む","管理"],
+   a:"__CARE__"},  /* answerFreeで現在の花の手入れに差し替え */
+  {k:["植え替え","植替","いつ","時期","カレンダー"],
+   a:"植え替えの大きな節目は<b>春（GW頃）に夏花へ</b>、<b>秋にパンジー類・球根仕込み</b>の年2回や。"+
+     "シミュレーターの『季節の花壇プラン提案』に、その季節のおすすめを出しとるさかい見てみてや。"}
+];
+
+/* 指定の花（既定は現在選択中）の手入れ＆環境を文章で返す（チャット用） */
+function careText(key){
+  key=key||state.plant;
+  const p=PLANTS[key]; const c=CARE[key]||{};
+  return `<b>${p.name}</b>のお手入れと環境はこうや。<br><br>`+
+    `<b>🌸 花がら摘み</b><br>${c.deadhead||""}<br><br>`+
+    `<b>✂ 切り戻し・ピンチ（高さ・株姿）</b><br>${c.pinch||""}<br><br>`+
+    `<b>🪴 剪定・刈り込み</b><br>${c.prune||""}<br><br>`+
+    `<b>🌍 好む環境</b><br>${c.env||p.note}<br><br>`+
+    `<b>💧 水やり</b><br>${c.water||""}`;
+}
+
+function answerFree(text){
+  const t=text.toLowerCase();
+  /* 文中に花の名前が出ていれば特定（手入れ質問でその花を答えるため） */
+  let mentioned=null;
+  for(const key in PLANTS){
+    const nm=PLANTS[key].name.replace(/（.*?）/g,"");
+    if(nm && key.indexOf("other")<0 && text.indexOf(nm.slice(0,3))>=0){ mentioned=key; break; }
+  }
+  for(const item of KW){
+    if(item.k.some(w=>text.indexOf(w)>=0 || t.indexOf(w.toLowerCase())>=0)){
+      if(item.a==="__CARE__") return careText(mentioned);  /* 手入れ・環境は対象の花で動的に */
+      return item.a;
+    }
+  }
+  /* 植物名だけのときは概要を返す */
+  if(mentioned){
+    const p=PLANTS[mentioned];
+    return `<b>${p.name}</b>やな。${p.note}<br>（${p.type}／耐寒 ${p.hardy}／耐暑 ${p.heat}／花期 ${p.bloom}）`+
+      `<br><br>くわしい手入れは「${p.name} 手入れ」と聞くか、左で選んで『✂ お手入れ』ボタンを押してや。`;
+  }
+  return "なるほどな。もうちょい具体的に聞かせてくれるか？　たとえば「徒長」「花がら摘み」「うどんこ病」"+
+    "「水やり」「植え替え」みたいな言葉を入れてくれたら、わしの経験から詳しゅう答えるで。"+
+    "左の診断で植物と症状を選んで『💡いまの診断結果の理由を教えて』を押すのもええよ。";
+}
+
+function sendChat(){
+  const inp=document.getElementById("chatInput");
+  const v=inp.value.trim(); if(!v)return;
+  addMsg(v,"user"); inp.value="";
+  setTimeout(()=>addMsg(answerFree(v),"bot"),300);
+}
+document.getElementById("chatSend").onclick=sendChat;
+document.getElementById("chatInput").addEventListener("keydown",e=>{
+  if(e.key==="Enter")sendChat();
+});
+
+/* 初回あいさつ ＆ 初期描画 */
+addMsg("おう、よう来たな。公園の花壇を40年見てきた<b>みどり親方</b>や。"+
+  "左で植物と季節・症状を選んだら見立てを出す。気になることは下のボタンか、何でも入力して聞いてや。","bot");
+render();
+
+/* ===== 合言葉ロック ===== */
+(function(){
+  const KEY="kadan_auth_2026", PASS="hana2026";
+  const ov=document.getElementById("lockOverlay");
+  if(sessionStorage.getItem(KEY)==="ok"){ov.style.display="none";return;}
+  const inp=document.getElementById("lockPass");
+  const btn=document.getElementById("lockBtn");
+  const err=document.getElementById("lockErr");
+  function check(){
+    if(inp.value.trim()===PASS){
+      sessionStorage.setItem(KEY,"ok");
+      ov.style.display="none";
+    } else {
+      err.textContent="合言葉が違います。もう一度どうぞ。";
+      inp.value=""; inp.focus();
+    }
+  }
+  btn.onclick=check;
+  inp.addEventListener("keydown",e=>{ if(e.key==="Enter") check(); });
+  inp.focus();
+})();
+</script>
+</body>
+</html>
